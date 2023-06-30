@@ -37,7 +37,7 @@ class GenSVD:
 
         window: MemoryMap
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name in ["bootrom", "scratchpad", "internal_sram", "ram", "rom"]:
+            if window.name in ["bootrom", "scratchpad", "mainram", "ram", "rom"]:
                 logging.info("Skipping non-peripheral resource: {}".format(window.name))
                 continue
 
@@ -57,7 +57,7 @@ class GenSVD:
 
         window: MemoryMap
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name not in ["bootrom", "sram", "scratchpad", "internal_sram"]:
+            if window.name not in ["bootrom", "scratchpad", "mainram", "ram", "rom"]:
                 continue
 
             memoryRegion = SubElement(memoryRegions, "memoryRegion")

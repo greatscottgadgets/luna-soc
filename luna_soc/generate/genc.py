@@ -232,18 +232,20 @@ class GenC():
         # TODO - check all memories
 
         # Add regions for our main ROM and our main RAM.
-        #for memory in [self._soc._main_rom, self._soc._main_ram]:
-        for memory in [self._soc.bootrom, self._soc.mainram]:
-
-            # Figure out our fields: a region name, our start, and our size.
-            name = "ram" if (memory is self._soc.mainram) else "rom"
-            start, size = self._soc.range_for_peripheral(memory)
-
-            #name = memory.name
-            #size = memory.size
-
+        if self._soc.bootrom:
+            start, size = self._soc.range_for_peripheral(self._soc.bootrom)
             if size:
-                emit(f"    {name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{size:08x}")
+                emit(f"    rom : ORIGIN = 0x{start:08x}, LENGTH = 0x{size:08x}")
+
+        if self._soc.scratchpad:
+            start, size = self._soc.range_for_peripheral(self._soc.scratchpad)
+            if size:
+                emit(f"    scratchpad : ORIGIN = 0x{start:08x}, LENGTH = 0x{size:08x}")
+
+        if self._soc.mainram:
+            start, size = self._soc.range_for_peripheral(self._soc.mainram)
+            if size:
+                emit(f"    ram : ORIGIN = 0x{start:08x}, LENGTH = 0x{size:08x}")
 
         emit("}")
         emit("")

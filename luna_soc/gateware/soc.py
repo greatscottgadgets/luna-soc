@@ -8,7 +8,7 @@
 
 from .cpu.vexriscv     import VexRiscv
 from .csr.sram         import SRAMPeripheral as SRAMPeripheralWithACK
-from .wishbone.memory  import WishboneRAM
+from .wishbone.memory  import WishboneRAM, WishboneROM
 from ..generate        import Introspect
 
 from amaranth                import *
@@ -36,6 +36,7 @@ import logging
 # - CoreSoC -------------------------------------------------------------------
 
 class CoreSoC(CPUSoC, Elaboratable):
+    # TODO lose internal_sram_addr and internal_sram_size
     def __init__(self, cpu=MinervaCPU(), clock_frequency=int(60e6), internal_sram_addr=0x40000000, internal_sram_size=int(32768), with_debug=False):
         super().__init__()
 
@@ -67,6 +68,7 @@ class CoreSoC(CPUSoC, Elaboratable):
 
         # Things we don't have but lambdasoc's jinja2 templates expect
         # TODO should we just make them properties?
+        self.mainram = None
         self.sdram = None
         self.ethmac = None
 
@@ -137,6 +139,7 @@ class LunaSoC(CoreSoC):
 
     # - LunaSoC user api --
 
+    # TODO move internal_sram_addr and internal_sram_size here
     def add_bios_and_peripherals(self, uart_pins, uart_baud_rate=115200, fixed_addresses=False):
         """ Adds a simple BIOS that allows loading firmware, and the requisite peripherals.
 
@@ -145,7 +148,7 @@ class LunaSoC(CoreSoC):
             self.scratchpad     -- A RAM memory used for the BIOS. (required by LambdaSoC)
             self.uart           -- An AsyncSerialPeripheral used for serial I/O.
             self.timer          -- A TimerPeripheral used for BIOS timing.
-            self._internal_sram -- Program RAM.
+            self.mainram        -- Program RAM.
 
         Parameters:
             uart_pins       -- The UARTResource to be used for UART communications; or an equivalent record.
@@ -176,29 +179,20 @@ class LunaSoC(CoreSoC):
             pins      = uart_pins,
         )
 
-        # load external firmware binary into bootrom
-        #firmware_bin = "/Users/antoine/GreatScott/cynthion-litex.git/hello-rust/hello-rust.bin"
-        #from bootloader import get_mem_data
-        #data = get_mem_data(firmware_bin,
-        #                    data_width = 32,
-        #                    endianness = "little")
-        #print(["0x{:08x}".format(i) for i in data[:128]])
-
-        # add bootrom, scratchpad, uart, timer, _internal_sram
+        # add bootrom, scratchpad, uart, timer, mainram
         self.bootrom = SRAMPeripheral(size=bootrom_size, writable=False)
-        #self.bootrom = SRAMPeripheral(size=bootrom_size, writable=False, init=data)
         self._bus_decoder.add(self.bootrom.bus, addr=bootrom_addr)
 
         self.scratchpad = SRAMPeripheral(size=scratchpad_size)
         self._bus_decoder.add(self.scratchpad.bus, addr=scratchpad_addr)
 
         # VexRiscv does not like LambdaSoC RAM for main program memory
-        self._internal_sram = SRAMPeripheralWithACK(size=internal_sram_size)
-        # self._internal_sram = WishboneRAM(
+        self.mainram = SRAMPeripheralWithACK(size=internal_sram_size)
+        # self.mainram = WishboneRAM(
         #     name = "internal_sram",
         #     addr_width = (self.internal_sram_size - 1).bit_length(),
         # )
-        self._bus_decoder.add(self._internal_sram.bus, addr=internal_sram_addr)
+        self._bus_decoder.add(self.mainram.bus, addr=internal_sram_addr)
 
         self.timer = TimerPeripheral(width=timer_width)
         self._bus_decoder.add(self.timer.bus, addr=timer_addr)
@@ -209,27 +203,6 @@ class LunaSoC(CoreSoC):
         self._bus_decoder.add(self.uart.bus, addr=uart_addr)
         self.intc.add_irq(self.uart.irq, index=uart_irqno)
         self._interrupt_map[uart_irqno] = self.uart
-
-
-    def add_rom(self, data, size, addr=0, is_main_rom=True):
-        """ Creates a simple ROM and adds it to the design.
-
-        Parameters:
-            data -- The data to fill the relevant ROM.
-            size -- The size for the rom that should be created.
-            addr -- The address at which the ROM should reside.
-        """
-        pass
-
-
-    def add_ram(self, size: int, addr: int = None, is_main_mem: bool = True):
-        """ Creates a simple RAM and adds it to our design.
-
-        Parameters:
-            size -- The size of the RAM, in bytes. Will be rounded up to the nearest power of two.
-            addr -- The address at which to place the RAM.
-        """
-        pass
 
 
     def add_peripheral(self, peripheral: lambdasoc.periph.Peripheral, *, as_submodule=True, **kwargs) -> lambdasoc.periph.Peripheral:
@@ -267,13 +240,16 @@ class LunaSoC(CoreSoC):
 
     # - LambdaSoC @property overrides --
 
-    @property
-    def mainram(self):
-        return self.sram
+    #@property
+    #def mainram(self):
+    #    return self.mainram
 
-    @property
-    def sram(self):
-        return self._internal_sram
+    #@property
+    #def sram(self):
+    #    if hasattr(self, "_internal_sram"):
+    #        return self._internal_sram
+    #    else:
+    #        return None
 
 
     # - Elaboratable --
@@ -287,10 +263,8 @@ class LunaSoC(CoreSoC):
         m.submodules.scratchpad = self.scratchpad
 
         # TODO
-        #if self.sram is not None:
-        #    m.submodules.sram = self.sram
-        if self._internal_sram is not None:
-            m.submodules.sram = self._internal_sram
+        if self.mainram is not None:
+            m.submodules.mainram = self.mainram
 
         return m
 
