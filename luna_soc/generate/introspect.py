@@ -54,7 +54,7 @@ class Introspect:
                 # TODO
                 if False: #self._soc._build_bios and omit_bios_mem:
                     # If we're omitting bios resources, skip the BIOS ram/rom.
-                    if (self._soc.sram._mem is resource) or (self._soc.bootrom._mem is resource):
+                    if (self._soc.mainram._mem is resource) or (self._soc.bootrom._mem is resource):
                         continue
 
                 # ... and extract the peripheral's range/vitals...
@@ -120,11 +120,12 @@ class Introspect:
         logging.info("")
 
         # Main memory.
-        memory_location = self.main_ram_address()
-        logging.info(f"Main memory at 0x{memory_location:08x}; upload using:")
-        logging.info(f"    flterm --kernel <your_firmware> --kernel-addr 0x{memory_location:08x} --speed 115200")
-        logging.info("or")
-        logging.info(f"    lxterm --kernel <your_firmware> --kernel-adr 0x{memory_location:08x} --speed 115200")
+        if self._soc.mainram:
+            memory_location = self.main_ram_address()
+            logging.info(f"Main memory at 0x{memory_location:08x}; upload using:")
+            logging.info(f"    flterm --kernel <your_firmware> --kernel-addr 0x{memory_location:08x} --speed 115200")
+            logging.info("or")
+            logging.info(f"    lxterm --kernel <your_firmware> --kernel-adr 0x{memory_location:08x} --speed 115200")
 
         logging.info("")
 

@@ -37,7 +37,7 @@ class GenRust:
         # memory regions
         emit("MEMORY {")
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name not in ["bootrom", "scratchpad", "internal_sram"]:
+            if window.name not in ["bootrom", "scratchpad", "mainram"]:
                 logging.info("Skipping non-memory resource: {}".format(window.name))
                 continue
             emit(f"    {window.name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{stop-start:08x}")
@@ -46,12 +46,12 @@ class GenRust:
 
         # region aliases
         aliases = {
-            "REGION_TEXT":   "internal_sram",
-            "REGION_RODATA": "internal_sram",
-            "REGION_DATA":   "internal_sram",
-            "REGION_BSS":    "internal_sram",
-            "REGION_HEAP":   "internal_sram",
-            "REGION_STACK":  "internal_sram",
+            "REGION_TEXT":   "mainram",
+            "REGION_RODATA": "mainram",
+            "REGION_DATA":   "mainram",
+            "REGION_BSS":    "mainram",
+            "REGION_HEAP":   "mainram",
+            "REGION_STACK":  "mainram",
         }
         for alias, region in aliases.items():
             emit(f"REGION_ALIAS(\"{alias}\", {region});")

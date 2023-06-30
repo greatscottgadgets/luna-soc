@@ -10,8 +10,8 @@ from lambdasoc.periph import Peripheral
 class LedPeripheral(Peripheral, Elaboratable):
     """ Example peripheral that controls the board's LEDs. """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name="leds"):
+        super().__init__(name=name)
 
         # Create our LED register.
         # Note that there's a bunch of 'magic' that goes on behind the scenes, here:
