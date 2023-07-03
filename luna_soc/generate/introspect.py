@@ -7,15 +7,12 @@
 """Introspection tools for SoC designs."""
 
 import amaranth_soc
-
 import lambdasoc
-from lambdasoc.soc.cpu import CPUSoC, BIOSBuilder
-
 import logging
 
 
 class Introspect:
-    def __init__(self, soc: CPUSoC):
+    def __init__(self, soc: lambdasoc.soc.cpu.CPUSoC):
         self._soc = soc
 
     # - public API --
@@ -131,5 +128,8 @@ class Introspect:
 
     def main_ram_address(self):
         """ Returns the address of the main system RAM. """
-        start, _  = self.range_for_peripheral(self._soc.mainram)
+        if self._soc.mainram is None:
+            start, _  = self.range_for_peripheral(self._soc.scratchpad)
+        else:
+            start, _  = self.range_for_peripheral(self._soc.mainram)
         return start

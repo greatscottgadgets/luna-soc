@@ -2,7 +2,9 @@
 **/scala/project/target/
 **/scala/target/
 memory.x
+applets/**/build/
 examples/**/build/
+*.bit
 
 # Compiled python files
 __pycache__/
@@ -10,6 +12,11 @@ __pycache__/
 *$py.class
 *.egg-info
 host/dist
+
+# C
+*.bin
+*.elf
+*.o
 
 # Rust
 **/target/
