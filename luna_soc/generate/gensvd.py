@@ -19,6 +19,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
 from os import path
 import logging
+import sys
 
 class GenSVD:
 
@@ -30,6 +31,7 @@ class GenSVD:
 
     def generate_svd(self, file=None, vendor="amaranth-soc", name="soc", description=None):
         """ Generate a svd file for the given SoC"""
+
         device = _generate_section_device(self._soc, vendor, name, description)
 
         # <peripherals />
@@ -38,7 +40,7 @@ class GenSVD:
         window: MemoryMap
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
             if window.name in ["bootrom", "scratchpad", "mainram", "ram", "rom"]:
-                logging.info("Skipping non-peripheral resource: {}".format(window.name))
+                logging.debug("Skipping non-peripheral resource: {}".format(window.name))
                 continue
 
             peripheral = _generate_section_peripheral(peripherals, self._soc, window, start, stop, ratio)
@@ -73,10 +75,11 @@ class GenSVD:
         # dump
         output = ElementTree.tostring(device, 'utf-8')
         output = minidom.parseString(output)
-        #output = output.toprettyxml(indent="  ")
         output = output.toprettyxml(indent="  ", encoding="utf-8")
 
         # write to file
+        if file is None:
+            file = sys.stdout
         file.write(str(output.decode("utf-8")))
         file.close()
 

@@ -1,4 +1,4 @@
-import os, math, struct
+import logging, math, os, struct
 
 def get_mem_regions(filename_or_regions, offset):
     if isinstance(filename_or_regions, dict):
@@ -6,7 +6,19 @@ def get_mem_regions(filename_or_regions, offset):
     else:
         filename = filename_or_regions
         if not os.path.isfile(filename):
-            raise FileNotFoundError(f"Unable to find '{filename}' memory content file.")
+            # TODO This is cursed:
+            #
+            #   * SoC definitions occur in the SoC constructor.
+            #   * The SRAMPeripheral 'init' parameter requires a list of int rather than a filename.
+            #   * This causes instantiation of the SoC to fail even if the goal
+            #     is only to introspect the design in order to generate the 'init' file!
+            #
+            # A better solution will be to go back to using our own fork of SRAMPeripheral
+            # and extends with the option to take a filename for the 'init' parameter and which
+            # which is only resolved to the file data at elaboration time.
+            logging.warn(f"Memory image '{filename}' has not yet been generated.")
+            return None
+            #raise FileNotFoundError(f"Unable to find '{filename}' memory content file.")
         _, ext = os.path.splitext(filename)
         if ext == ".json":
             f = open(filename, "r")
@@ -30,12 +42,14 @@ def get_mem_data(filename_or_regions, data_width=32, endianness="big", mem_size=
 
     # Create memory regions.
     regions = get_mem_regions(filename_or_regions, offset)
+    if regions is None:
+        return None
 
     # Determine data_size.
     data_size = 0
     for filename, base in regions.items():
         if not os.path.isfile(filename):
-            raise OSError(f"Unable to find {filename} memory content file.")
+            raise OSError(f"Unable to find '{filename}' memory content file.")
         data_size = max(int(base, 16) + os.path.getsize(filename) - offset, data_size)
     assert data_size > 0
     if mem_size is not None:

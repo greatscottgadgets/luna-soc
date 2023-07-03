@@ -76,7 +76,14 @@ class CoreSoC(CPUSoC, Elaboratable):
         self._interrupt_index = 0
         self._interrupt_map = {}
         self._peripherals = []
+        self._has_bios = False
 
+
+    # - CoreSoC @properties --
+
+    @property
+    def has_bios(self):
+        return self._has_bios
 
     # - CPUSoC @property overrides --
 
@@ -204,6 +211,8 @@ class LunaSoC(CoreSoC):
         self.intc.add_irq(self.uart.irq, index=uart_irqno)
         self._interrupt_map[uart_irqno] = self.uart
 
+        # Set a hint for top_level_cli to perform a bios build.
+        self._bios = True
 
     def add_peripheral(self, peripheral: lambdasoc.periph.Peripheral, *, as_submodule=True, **kwargs) -> lambdasoc.periph.Peripheral:
         """Helper function to add a peripheral to the SoC.
@@ -237,21 +246,6 @@ class LunaSoC(CoreSoC):
 
         return peripheral
 
-
-    # - LambdaSoC @property overrides --
-
-    #@property
-    #def mainram(self):
-    #    return self.mainram
-
-    #@property
-    #def sram(self):
-    #    if hasattr(self, "_internal_sram"):
-    #        return self._internal_sram
-    #    else:
-    #        return None
-
-
     # - Elaboratable --
 
     def elaborate(self, platform):
@@ -262,7 +256,6 @@ class LunaSoC(CoreSoC):
         m.submodules.bootrom    = self.bootrom
         m.submodules.scratchpad = self.scratchpad
 
-        # TODO
         if self.mainram is not None:
             m.submodules.mainram = self.mainram
 
