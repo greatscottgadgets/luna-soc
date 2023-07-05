@@ -34,6 +34,9 @@ dependencies = [
     "luna @ git+https://github.com/greatscottgadgets/luna@main",
 ]
 
+[tool.setuptools]
+packages = ["luna_soc"]
+
 [tool.setuptools-git-versioning]
 enabled = true
 starting_version = "2023.06.26"

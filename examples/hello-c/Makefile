@@ -1,23 +1,25 @@
 SHELL := /bin/zsh
 
-UART := /dev/cu.usbmodem22401
-YOSYS_BIN := ~/GreatScott/gsg.git/cynthion/toolchain/oss-cad-suite/bin
+# - configuration -------------------------------------------------------------
 
-AR := riscv64-unknown-elf-ar
-CC := riscv64-unknown-elf-gcc
-OBJCOPY := riscv64-unknown-elf-objcopy
+UART	?= /dev/ttyACM0
+CROSS	?= riscv64-unknown-elf
+
+AR := $(CROSS)-ar
+CC := $(CROSS)-gcc
+OBJCOPY := $(CROSS)-objcopy
 
 # - gateware ------------------------------------------------------------------
 
 gateware:
 	rm -rf build
-	PATH=$(PATH):$(YOSYS_BIN) AR=$(AR) python top.py
+	AR=$(AR) python top.py
 
 load:
 	-apollo configure build/top.bit
 
 load-ulx3s:
-	PATH=$(PATH):$(YOSYS_BIN) openFPGALoader --board ulx3s build/top.bit
+	openFPGALoader --board ulx3s build/top.bit
 
 # - firmware -----------------------------------------------------------------
 
@@ -41,7 +43,4 @@ run: firmware.bin
 	expect -c "spawn $(LXTERM); send \nserialboot\n; interact"
 
 clean:
-	-rm -rf *.elf *.bin
-
-distclean: clean
-	-rm -rf build/
+	-rm -rf build/ *.elf *.bin

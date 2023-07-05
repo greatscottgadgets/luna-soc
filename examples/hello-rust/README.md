@@ -2,16 +2,10 @@
 
 A simple firmware example for LUNA-SOC written in Rust.
 
+
 ## Dependencies
 
 Please ensure you've installed any required dependencies referenced in [`../examples/README.md`](../examples/README.md).
-
-
-## Configuration
-
-Edit the `Makefile` and set `YOSYS_BIN` to the location of your `oss-cad-suite` installation.
-
-Edit `.cargo/flash.sh` and set `UART` to the port matching your board's UART.
 
 
 ## Running the example

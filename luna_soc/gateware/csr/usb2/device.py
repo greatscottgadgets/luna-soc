@@ -9,7 +9,6 @@ to your own designs; including the core :class:`USBDevice` class.
 """
 
 import logging
-import unittest
 
 from amaranth                      import Signal, Module, Elaboratable, Const
 
