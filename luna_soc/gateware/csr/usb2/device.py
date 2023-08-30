@@ -43,7 +43,8 @@ class USBDeviceController(Peripheral, Elaboratable):
         #
         self.connect   = Signal(reset=1)
         self.bus_reset = Signal()
-
+        self.low_speed_only = Signal()
+        self.full_speed_only = Signal()
 
         #
         # Registers.
@@ -57,6 +58,14 @@ class USBDeviceController(Peripheral, Elaboratable):
         self._speed = regs.csr(2, "r", desc="""
             Indicates the current speed of the USB device. 0 indicates High; 1 => Full,
             2 => Low, and 3 => SuperSpeed (incl SuperSpeed+).
+        """)
+
+        self._low_speed_only = regs.csr(1, "rw", desc="""
+            Set this bit to '1' to force the device to operate at low speed.
+        """)
+
+        self._full_speed_only = regs.csr(1, "rw", desc="""
+            Set this bit to '1' to force the device to operate at full speed.
         """)
 
         self._reset_irq = self.event(mode="rise", name="reset", desc="""
@@ -82,9 +91,11 @@ class USBDeviceController(Peripheral, Elaboratable):
             The :class:`USBDevice` object to be controlled.
         """
         return [
-            device.connect      .eq(self.connect),
-            self.bus_reset      .eq(device.reset_detected),
-            self._speed.r_data  .eq(device.speed)
+            device.connect          .eq(self.connect),
+            device.low_speed_only   .eq(self.low_speed_only),
+            device.full_speed_only  .eq(self.full_speed_only),
+            self.bus_reset          .eq(device.reset_detected),
+            self._speed.r_data      .eq(device.speed)
         ]
 
 
@@ -96,6 +107,15 @@ class USBDeviceController(Peripheral, Elaboratable):
         m.d.comb += self.connect.eq(self._connect.r_data)
         with m.If(self._connect.w_stb):
             m.d.usb += self._connect.r_data.eq(self._connect.w_data)
+
+        # Speed configuration registers.
+        m.d.comb += self.low_speed_only.eq(self._low_speed_only.r_data)
+        with m.If(self._low_speed_only.w_stb):
+            m.d.usb += self._low_speed_only.r_data.eq(self._low_speed_only.w_data)
+
+        m.d.comb += self.full_speed_only.eq(self._full_speed_only.r_data)
+        with m.If(self._full_speed_only.w_stb):
+            m.d.usb += self._full_speed_only.r_data.eq(self._full_speed_only.w_data)
 
         # Reset-detection event.
         m.d.comb += self._reset_irq.stb.eq(self.bus_reset)
