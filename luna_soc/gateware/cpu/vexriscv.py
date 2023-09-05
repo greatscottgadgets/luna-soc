@@ -85,7 +85,7 @@ class VexRiscv(CPU, Elaboratable):
         i_reset     = ResetSignal("sync") | self.ext_reset
 
         # instantiate VexRiscv
-        platform.add_file(self._source_path, self._source_verilog)
+        platform.add_file(self._source_file, self._source_verilog)
         self._cpu = Instance(
             "VexRiscv",
             # clock and reset
