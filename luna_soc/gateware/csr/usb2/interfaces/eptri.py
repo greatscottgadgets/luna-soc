@@ -595,6 +595,9 @@ class OutFIFOInterface(Peripheral, Elaboratable):
         # Keep track of the PIDs for each endpoint, which we'll toggle automatically.
         endpoint_data_pid = Array(Signal() for _ in range(16))
 
+        # Keep track of whether our FIFO is ready to receive a new packet.
+        fifo_ready = Signal()
+
         # Keep track of whether we're enabled.
         with m.If(self.enable.w_stb):
             m.d.usb += self.enable.r_data.eq(self.enable.w_data)
@@ -603,12 +606,18 @@ class OutFIFOInterface(Peripheral, Elaboratable):
         with m.If(self.prime.w_stb):
             m.d.usb += endpoint_primed[self.epno.r_data].eq(self.prime.w_data)
 
-        # If we've just ACK'd a receive, clear our enable and un-prime the given endpoint.
+        # If we've just ACK'd a receive, clear our enable, un-prime the given endpoint and
+        # clear our FIFO's ready state.
         with m.If(interface.handshakes_out.ack & token.is_out):
             m.d.usb += [
                 self.enable.r_data                .eq(0),
                 endpoint_primed[token.endpoint]   .eq(0),
+                fifo_ready                        .eq(0),
             ]
+
+        # Mark our FIFO as ready iff it is enabled and primed on receipt of a new token.
+        with m.If(token.new_token & self.enable.r_data & endpoint_primed[token.endpoint]):
+            m.d.usb += fifo_ready.eq(1)
 
         # Set the value of our endpoint `stall` based on our `stall` register...
         with m.If(self.stall.w_stb):
@@ -641,7 +650,7 @@ class OutFIFOInterface(Peripheral, Elaboratable):
         #  - We're not stalled.
         stalled          = token.is_out & endpoint_stalled[token.endpoint]
         endpoint_primed  = endpoint_primed[token.endpoint]
-        ready_to_receive = endpoint_primed & self.enable.r_data & ~stalled
+        ready_to_receive = fifo_ready & endpoint_primed & self.enable.r_data & ~stalled
         allow_receive    = token.is_out & ready_to_receive
         nak_receives     = token.is_out & ~ready_to_receive & ~stalled
 
