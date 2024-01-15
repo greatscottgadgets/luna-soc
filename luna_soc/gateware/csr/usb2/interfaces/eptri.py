@@ -222,6 +222,11 @@ class InFIFOInterface(Peripheral, Elaboratable):
         self.pend = regs.csr(1, "r", desc="`1` iff an interrupt is pending")
         self.pid  = regs.csr(1, "rw", desc="Contains the current PID toggle bit for the given endpoint.")
 
+        self.nak  = regs.csr(16, "r", desc="""
+            Read-only register. Contains a bitmask of endpoints that have responded with a NAK since the
+            last read of this register.
+        """)
+
         #
         # Interrupts
         #
@@ -234,6 +239,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
         #
         # I/O port
         #
+
         self.interface = EndpointInterface()
 
         #
@@ -303,12 +309,16 @@ class InFIFOInterface(Peripheral, Elaboratable):
         # Keep track of the current DATA pid for each endpoint.
         endpoint_data_pid = Array(Signal() for _ in range(16))
 
+        # Keep track of which endpoints have responded with a NAK.
+        endpoint_nakked  = Array(Signal() for _ in range(16))
+
         # Clear our system state on reset.
         with m.If(self.reset.w_stb):
             for i in range(16):
                 m.d.usb += [
                     endpoint_stalled[i]   .eq(0),
                     endpoint_data_pid[i]  .eq(0),
+                    endpoint_nakked[i]    .eq(0),
                 ]
 
 
@@ -322,21 +332,32 @@ class InFIFOInterface(Peripheral, Elaboratable):
         with m.If(token.is_setup & token.new_token):
             m.d.usb += [
                 endpoint_stalled[token.endpoint]   .eq(0),
-                endpoint_data_pid[token.endpoint]  .eq(1)
+                endpoint_data_pid[token.endpoint]  .eq(1),
             ]
 
 
         #
         # Status registers.
         #
+
         m.d.comb += [
             self.have.r_data  .eq(fifo.r_rdy),
             self.pid.r_data   .eq(endpoint_data_pid[self.epno.r_data])
         ]
 
+        # When the nak status register is read, return the current
+        # nak states of the endpoints and reset them.
+        with m.If(self.nak.r_stb):
+            m.d.usb += [
+                self.nak.r_data.eq(Cat(endpoint_nakked)),
+                Cat(endpoint_nakked).eq(0),
+            ]
+
+
         #
         # Data toggle control.
         #
+
         endpoint_matches = (token.endpoint == self.epno.r_data)
         packet_complete  = self.interface.handshakes_in.ack & token.is_in & endpoint_matches
 
@@ -379,7 +400,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
                     # Otherwise, NAK.
                     with m.Else():
                         m.d.comb += handshakes_out.nak.eq(1)
-
+                        m.d.usb += endpoint_nakked[token.endpoint].eq(1)
 
                 # If the user request that we send data, "prime" the endpoint.
                 # This means we have data to send, but are just waiting for an IN token.
@@ -415,6 +436,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
                     # Otherwise, we don't have a response; NAK the packet.
                     with m.Else():
                         m.d.comb += handshakes_out.nak.eq(1)
+                        m.d.usb += endpoint_nakked[token.endpoint].eq(1)
 
                 # Always return to IDLE on reset.
                 with m.If(self.reset.w_stb):
