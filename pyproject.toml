@@ -36,7 +36,9 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["luna_soc"]
+
+[tool.setuptools.package-dir]
+luna_soc = "luna_soc"
 
 [tool.setuptools-git-versioning]
 enabled = true
