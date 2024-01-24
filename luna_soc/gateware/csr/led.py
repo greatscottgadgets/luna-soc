@@ -32,10 +32,10 @@ class LedPeripheral(Peripheral, Elaboratable):
         m.submodules.bridge = self._bridge
 
         # Grab our LEDS...
-        leds = [platform.request_optional("led", i, default=NullPin()).o for i in range(0, 8)]
+        leds = Cat(platform.request_optional("led", i, default=NullPin()).o for i in range(0, 8))
 
         # ... and update them on each register write.
         with m.If(self._output.w_stb):
-            m.d.sync += Cat(leds).eq(self._output.w_data)
+            m.d.sync += leds.eq(self._output.w_data)
 
         return m
