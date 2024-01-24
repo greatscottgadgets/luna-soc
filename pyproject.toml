@@ -28,7 +28,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "amaranth @ git+https://github.com/amaranth-lang/amaranth",
     "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
     "minerva @ git+https://github.com/minerva-cpu/minerva",
     "lambdasoc @ git+https://github.com/antoinevg/lambdasoc.git@antoinevg/support-vexriscv",
