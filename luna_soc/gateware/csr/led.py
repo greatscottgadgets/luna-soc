@@ -4,8 +4,9 @@
 # Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth         import Cat, Elaboratable, Module, Signal, Record
-from lambdasoc.periph import Peripheral
+from amaranth               import Cat, Elaboratable, Module, Signal, Record
+from lambdasoc.periph       import Peripheral
+from luna.gateware.platform import NullPin
 
 class LedPeripheral(Peripheral, Elaboratable):
     """ Example peripheral that controls the board's LEDs. """
@@ -31,10 +32,10 @@ class LedPeripheral(Peripheral, Elaboratable):
         m.submodules.bridge = self._bridge
 
         # Grab our LEDS...
-        leds = Cat(platform.request("led", i) for i in range(6))
+        leds = [platform.request_optional("led", i, default=NullPin()).o for i in range(0, 8)]
 
         # ... and update them on each register write.
         with m.If(self._output.w_stb):
-            m.d.sync += leds.eq(self._output.w_data)
+            m.d.sync += Cat(leds).eq(self._output.w_data)
 
         return m
