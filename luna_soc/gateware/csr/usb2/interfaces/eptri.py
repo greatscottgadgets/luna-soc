@@ -342,16 +342,9 @@ class InFIFOInterface(Peripheral, Elaboratable):
 
         m.d.comb += [
             self.have.r_data  .eq(fifo.r_rdy),
-            self.pid.r_data   .eq(endpoint_data_pid[self.epno.r_data])
+            self.pid.r_data   .eq(endpoint_data_pid[self.epno.r_data]),
+            self.nak.r_data   .eq(Cat(endpoint_nakked)),
         ]
-
-        # When the nak status register is read, return the current
-        # nak states of the endpoints and reset them.
-        with m.If(self.nak.r_stb):
-            m.d.usb += [
-                self.nak.r_data.eq(Cat(endpoint_nakked)),
-                Cat(endpoint_nakked).eq(0),
-            ]
 
 
         #
@@ -405,6 +398,8 @@ class InFIFOInterface(Peripheral, Elaboratable):
                 # If the user request that we send data, "prime" the endpoint.
                 # This means we have data to send, but are just waiting for an IN token.
                 with m.If(self.epno.w_stb & ~stalled):
+                    # we can also clear our NAK status now
+                    m.d.usb += endpoint_nakked[token.endpoint].eq(0)
                     m.next = "PRIMED"
 
                 # Always return to IDLE on reset.
@@ -436,7 +431,6 @@ class InFIFOInterface(Peripheral, Elaboratable):
                     # Otherwise, we don't have a response; NAK the packet.
                     with m.Else():
                         m.d.comb += handshakes_out.nak.eq(1)
-                        m.d.usb += endpoint_nakked[token.endpoint].eq(1)
 
                 # Always return to IDLE on reset.
                 with m.If(self.reset.w_stb):
@@ -449,6 +443,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
                     tx.valid  .eq(1),
                     tx.last   .eq(1)
                 ]
+                # Trigger our DONE interrupt.
                 m.d.comb += self._done_irq.stb.eq(1)
                 m.next = 'IDLE'
 
