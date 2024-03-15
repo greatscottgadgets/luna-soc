@@ -1,0 +1,56 @@
+bulk_in_transfer: "Bulk IN Transfer" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    cpu:    "CPU / SoC"
+
+    # usb transaction: NAK EP_IN
+    usb1: "EPTRI EP_IN will NAK host until it is primed to transmit" {
+        host -> eptri: "PID IN"
+        host <- eptri: "PID NAK"
+    }
+
+    # cpu: poll EP_IN NAK status register
+    cpu1: "Poll EP_IN NAK status register to check if host has\nrequested data on an endpoint." {
+        cpu -> eptri: "r(EP_IN.nak)"
+        cpu <- eptri: "bitmask: u16"
+    }
+
+    # cpu: write response data
+    cpu2: "Write response data to EPTRI EP_IN." {
+        write: "write response to EP_IN FIFO" {
+            cpu -> eptri: "for byte in response {"
+            cpu -> eptri: "w(EP_IN.data, byte)"
+        }
+        prime: "Prime EP_IN to transmit FIFO contents" {
+            cpu -> eptri: "w(EP_IN.epno, endpoint_number)"
+        }
+    }
+
+    # usb transaction: IN data transfer
+    usb2: "EPTRI EP_IN transmits data to host" {
+        host -> eptri: "PID IN"
+        host <- eptri: "PID DATAn bytes=[u8]"
+        host -> eptri: "PID ACK"
+    }
+
+    # trigger interrupt: IRQ_EP_IN (SendComplete)
+    irq1: "Trigger Interrupt: IRQ_EP_IN (SendComplete)" {
+        eptri -> cpu:   "IRQ_EP_IN"
+    }
+
+    # usb transaction: NAK EP_IN
+    usb3: "EPTRI EP_IN will NAK host until it is re-primed." {
+        host -> eptri: "PID IN"
+        host <- eptri: "PID NAK"
+    }
+
+    # handle interrupt: EP_IN (SendComplete)
+    irq1: "Handle Interrupt: IRQ_EP_IN (SendComplete)" {
+        get_ep: "get endpoint number" {
+            cpu -> eptri: "r(EP_IN.epno)"
+            cpu <- eptri: "endpoint_number"
+        }
+    }
+}

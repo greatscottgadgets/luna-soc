@@ -1,0 +1,104 @@
+control_out_transfer: "Control OUT Transfer" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    cpu:    "CPU / SoC"
+
+    setup_stage: "Setup Stage" {
+        # usb transaction: SETUP
+        usb1: "Host sends a SETUP packet." {
+            host  -> eptri: "PID SETUP"
+            host  -> eptri: "PID DATAn bytes=[u8; 8]"
+            eptri -> host:  "PID ACK"
+        }
+
+        # trigger interrupt: IRQ_EP_CONTROL (ReceiveSetupPacket)
+        irq1: "Trigger Interrupt: IRQ_EP_CONTROL (ReceiveSetupPacket)" {
+            eptri -> cpu: "IRQ_EP_CONTROL"
+        }
+
+        # usb transaction: NAK EP_OUT
+        usb2: "EPTRI EP_OUT will NAK host until it is primed to receive." {
+            host -> eptri: "PID OUT"
+            host -> eptri: "PID DATAn bytes=[u8]"
+            host <- eptri: "PID NAK"
+        }
+
+        # handle interrupt: IRQ_EP_CONTROL (ReceiveSetupPacket)
+        irq1: "Handle Interrupt: IRQ_EP_CONTROL (ReceiveSetupPacket)" {
+            get_ep: "get endpoint number" {
+                cpu -> eptri: "r(EP_CONTROL.epno)"
+                cpu <- eptri: "endpoint_number"
+            }
+            read_fifo: "while the control endoint FIFO has data, read the 8 bytes of the setup packet" {
+                cpu -> eptri: "while r(EP_CONTROL.have) {"
+                cpu <- eptri: "bool"
+                cpu -> eptri: "r(EP_CONTROL.data)"
+                cpu <- eptri: "u8"
+            }
+            cpu."parse setup packet and get ready for data stage if len > 0"
+        }
+    }
+
+    data_stage: "Data Stage (optional)" {
+        # prime EP_OUT
+        irq1: "Handle Interrupt: IRQ_EP_CONTROL (ReceiveSetupPacket)" {
+            prime: "prime EP_OUT to receive data" {
+                cpu -> eptri: "w(EP_OUT.epno, endpoint_number)"
+                cpu -> eptri: "w(EP_OUT.prime, true)"
+                cpu -> eptri: "w(EP_OUT.enable, true)"
+            }
+        }
+
+        # usb transaction: OUT data transfer
+        usb3: "EPTRI EP_OUT accepts data transfer from host." {
+            host -> eptri:  "PID OUT address=0x13 endpoint_number=0x1"
+            host -> eptri:  "PID DATAn bytes=[u8]"
+            host <- eptri:  "PID ACK"
+        }
+
+        # trigger interrupt: IRQ_EP_OUT (ReceivePacket)
+        irq2: "Trigger Interrupt: IRQ_EP_OUT (ReceivePacket)" {
+            eptri -> cpu:   "IRQ_EP_OUT"
+        }
+
+        # usb transaction: NAK EP_OUT
+        usb4: "EPTRI EP_OUT will NAK host until it is re-primed." {
+            host -> eptri: "PID IN"
+            host <- eptri: "PID NAK"
+        }
+
+        # handle interrupt: IRQ_EP_OUT (ReceivePacket)
+        irq2: "Handle Interrupt: IRQ_EP_OUT (ReceivePacket)" {
+            get_ep: "get transfer endpoint number" {
+                cpu -> eptri: "r(EP_OUT.data_ep)"
+                cpu <- eptri: "endpoint_number"
+            }
+            read_fifo: "while the FIFO has data, read the next byte" {
+                cpu -> eptri: "while r(EP_OUT.have) {"
+                cpu <- eptri: "bool"
+                cpu -> eptri: "r(EP_OUT.data)"
+                cpu <- eptri: "u8"
+            }
+        }
+    }
+
+    status_stage: "Status Stage" {
+        zlp: "Finally, send ZLP acknowledgement to host to end status stage." {
+            cpu -> eptri: "w(EP_IN.epno, endpoint_number)"
+        }
+
+        # usb transaction: send ZLP
+        usb5: "EPTRI EP_IN transmits ZLP" {
+            host -> eptri: "PID IN"
+            host <- eptri: "PID DATAn bytes=[u8; 0]"
+            host -> eptri: "PID ACK"
+        }
+
+        # trigger interrupt: EP_IN (SendComplete)
+        irq3: "Trigger Interrupt: EP_IN (SendComplete)" {
+            eptri -> cpu:   "IRQ_EP_IN"
+        }
+    }
+}

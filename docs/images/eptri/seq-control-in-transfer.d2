@@ -1,0 +1,125 @@
+control_in_transfer: "Control IN Transfer" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    cpu:    "CPU / SoC"
+
+    setup_stage: "Setup Stage" {
+        # usb transaction: SETUP
+        usb1: "Host sends a SETUP packet." {
+            host  -> eptri: "PID SETUP"
+            host  -> eptri: "PID DATAn bytes=[u8; 8]"
+            eptri -> host:  "PID ACK"
+        }
+
+        # trigger interrupt: EP_CONTROL (ReceiveSetupPacket)
+        irq1: "Trigger interrupt: EP_CONTROL (ReceiveSetupPacket)" {
+            eptri -> cpu: "IRQ_EP_CONTROL"
+        }
+
+        # usb transaction: NAK EP_IN
+        usb2: "EPTRI EP_IN will NAK host until it is primed to transmit" {
+            host -> eptri: "PID IN"
+            host <- eptri: "PID NAK"
+        }
+
+        # handle interrupt: ReceiveSetupPacket
+        irq1: "Handle Interrupt: IRQ_EP_CONTROL (ReceiveSetupPacket)" {
+            get_ep: "get endpoint number" {
+                cpu -> eptri: "r(EP_CONTROL.epno)"
+                cpu <- eptri: "endpoint_number"
+            }
+            read_fifo: "while the control endoint FIFO has data, read the 8 bytes of the setup packet" {
+                cpu -> eptri: "while r(EP_CONTROL.have) {"
+                cpu <- eptri: "bool"
+            cpu -> eptri: "r(EP_CONTROL.data)"
+                cpu <- eptri: "u8"
+            }
+            cpu."parse setup packet and get ready for data stage if len > 0"
+        }
+    }
+
+    data_stage: "Data Stage (optional)" {
+        # write response data
+        irq1: "Handle Interrupt: IRQ_EP_CONTROL (ReceiveSetupPacket)" {
+            write_fifo: "Write response data to EP_IN FIFO" {
+                cpu -> eptri: "for byte in response {"
+                cpu -> eptri: "w(EP_IN.data, byte)"
+            }
+            prime_ep: "Prime EP_IN to transmit FIFO contents" {
+                cpu -> eptri: "w(EP_IN.epno, endpoint_number)"
+            }
+        }
+
+        # usb transaction: IN data transfer
+        usb3: "EPTRI EP_IN transmits data to host" {
+            host -> eptri: "PID IN"
+            host <- eptri: "PID DATAn bytes=[u8]"
+            host -> eptri: "PID ACK"
+        }
+
+        # trigger interrupt: EP_IN (SendComplete)
+        irq2: "Trigger Interrupt: EP_IN (SendComplete)" {
+            eptri -> cpu:   "IRQ_EP_IN"
+        }
+    }
+
+    status_stage: "Status Stage" {
+        # usb transaction - eptri ep_out will nak host until it is primed
+        usb4: "EPTRI will NAK host until EP_OUT is primed to receive" {
+            host -> eptri: "PID OUT"
+            host -> eptri: "PID DATAn bytes=[]"
+            host <- eptri: "PID NAK"
+        }
+
+        # handle interrupt: EP_IN (ReceivePacket)
+        irq2: "Handle Interrupt: IRQ_EP_IN (SendComplete)" {
+            zlp: "prime EP_OUT to receive ZLP from host" {
+                # get ep that triggered interrupt
+                get_ep: "get transfer endpoint number" {
+                    cpu -> eptri: "r(EP_IN.epno)"
+                    cpu <- eptri: "endpoint_number"
+                }
+                # select the endpoint to prime
+                select: "select the EP_OUT endpoint to prime" {
+                    cpu -> eptri: "w(EP_OUT.epno, endpoint_number)"
+                }
+                # prime the endpoint
+                prime: "prime the endpoint" {
+                    cpu -> eptri: "w(EP_OUT.prime, true)"
+                }
+                # re-enable the interface
+                enable: "re-enable the interface" {
+                cpu -> eptri: "w(EP_OUT.enable, true)"
+                }
+            }
+        }
+
+        # usb transaction: receive ZLP
+        usb5: "EPTRI EP_OUT receives ZLP acknowledgement from host" {
+            host -> eptri: "PID OUT"
+            host -> eptri: "PID DATAn bytes=[]"
+            host <- eptri: "PID ACK"
+        }
+
+        # trigger EP_OUT interrupt: ReceivePacket
+        irq3: "Trigger EP_OUT interrupt: ReceivePacket" {
+            eptri -> cpu:   "IRQ_EP_OUT"
+        }
+
+        # soc interrupt handler
+        irq3: "Handle Interrupt: ReceivePacket" {
+            # get ep that triggered interrupt
+            get_ep: "get transfer endpoint number" {
+                cpu -> eptri: "r(EP_OUT.data_ep)"
+                cpu <- eptri: "endpoint_number"
+            }
+            read_fifo: "check that the FIFO is empty (zlp)" {
+                cpu -> eptri: "if r(EP_OUT.have) {"
+                cpu <- eptri: "bool"
+            }
+        }
+
+    }
+}
