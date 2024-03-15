@@ -2,10 +2,15 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
-SOURCEDIR     = source
-BUILDDIR      = build
+SPHINXOPTS	  =
+SPHINXBUILD	  = sphinx-build
+SOURCEDIR	  = source
+BUILDDIR	  = build
+
+# Compile all d2 diagrams
+D2DIR = ./images/
+d2:
+	@for f in $(shell ls $(D2DIR)/*.d2); do d2 $${f}; done
 
 # Put it first so that "make" without argument is like "make help".
 help:
