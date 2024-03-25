@@ -1,0 +1,89 @@
+# reference: https://github.com/hathach/tinyusb/compare/master...ktemkin:tinyusb:luna_riscv
+
+
+out_transfer: "OUT Transfers" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    irq:    "CPU - irq handler"
+    main:   "CPU - main loop"
+
+    # eptri ep_out will nak host until it is primed
+    t1: "USB Transaction" {
+        nak: "EPTRI will NAK host until EP_OUT is primed to receive" {
+            host -> eptri: "PID OUT"
+            host -> eptri: "PID DATA0 bytes=[u8]"
+            host <- eptri: "PID NAK"
+        }
+    }
+
+    # prime endpoint
+    prime1: "Prime EP_OUT when you're ready to receive data on an endpoint" {
+        # select the endpoint to prime
+        select: "select the endpoint to prime" {
+            main -> eptri: "w(EP_OUT.epno, endpoint_number)"
+        }
+        # prime the endpoint
+        prime: "prime the endpoint" {
+            main -> eptri: "w(EP_OUT.prime, true)"
+        }
+        # re-enable the interface
+        enable: "re-enable the interface" {
+            main -> eptri: "w(EP_OUT.enable, true)"
+        }
+    }
+
+    # usb transaction
+    t2: "USB Transaction" {
+        out: "OUT Transfer" {
+            host -> eptri:  "PID OUT address=0x13 endpoint_number=0x1"
+            host -> eptri:  "PID DATA0 bytes=[u8]"
+            host <- eptri:  "PID ACK"
+        }
+    }
+
+    # trigger EP_OUT interrupt
+    irq1: "Trigger EP_OUT interrupt" {
+        eptri -> irq:   "IRQ_EP_OUT"
+    }
+
+    # from here eptri will nak all OUT transactions until it is re-primed
+    nak2: "From here eptri will NAK all OUT transactions until it is\nre-primed" {
+        host -> eptri: "PID OUT"
+        host -> eptri: "PID DATA0 bytes=[u8]"
+        host <- eptri: "PID NAK"
+    }
+
+    # soc interrupt handler
+    cpu_irq: "Handle Interrupt" {
+        # get ep that triggered interrupt
+        get_ep: "get transfer endpoint number" {
+            irq -> eptri: "r(EP_OUT.ep)"
+            irq <- eptri: "endpoint_number"
+        }
+        read_fifo: "while the FIFO has data, read the next byte" {
+            irq -> eptri: "while r(EP_OUT.have) {"
+            irq <- eptri: "bool"
+            irq -> eptri: "r(EP_OUT.data)"
+            irq <- eptri: "u8"
+        }
+
+        prime2: "finally, re-prime EP_OUT if you're ready to receive\nmore data on the endpoint" {
+            irq -> eptri: "w(EP_OUT.epno, endpoint_number)"
+            irq -> eptri: "w(EP_OUT.prime, true)"
+            irq -> eptri: "w(EP_OUT.enable, true)"
+        }
+    }
+
+
+    # TODO talk about ZLP's ?
+    #
+    # A Bulk transfer is complete when:
+    #
+    #  - the number of bytes transferred is equal to the exact amount of data requested
+    #    . TODO CHECK even if transferring the data over multiple packets?
+    #    . TODO CHECK does the controller know this, or only the host or device?
+    #  - the number of bytes transferred is less than the endpoint's maximum packet size
+    #  - the host or device has responded with a ZLP
+}

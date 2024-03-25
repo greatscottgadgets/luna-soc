@@ -1,0 +1,137 @@
+vars: {
+    d2-config: {
+        #theme-id: 4
+        #dark-theme-id: 200
+        #pad: 0
+        #center: true
+        #sketch: true
+        # dagre, elk, tala (external install)
+        layout-engine: elk
+    }
+}
+
+# - objects --
+
+grid-columns: 10
+
+phy: "USB PHY" {
+}
+
+luna: {
+    grid-rows: 1
+    device: "USBDevice" {
+        grid-rows: 4
+        control: "Control Signals"
+        epi0: "EndpointInterface"
+        epi1: "EndpointInterface"
+        epi2: "EndpointInterface"
+    }
+}
+
+luna <-> phy
+
+eptri: {
+    #grid-columns: 2
+    l: "" {
+        grid-rows: 4
+        controller: "USBDeviceController" {
+            l: "" {
+                grid-rows: 1
+                grid-gap: 0
+                control: "Control Signals"
+            }
+            r: "" {
+                grid-rows: 2
+                grid-gap: 0
+                csr
+                irq
+            }
+        }
+        setup: "SetupFIFOInterface" {
+            l: "" {
+                grid-rows: 1
+                grid-gap: 0
+                fifo: "FIFO" #"SyncFIFOBuffered(width=8, depth=8)"
+            }
+            r: "" {
+                grid-rows: 2
+                grid-gap: 0
+                csr
+                irq
+            }
+        }
+        in: "InFIFOInterface" {
+            l: "" {
+                grid-rows: 1
+                grid-gap: 0
+                fifo: "FIFO" # "SyncFIFOBuffered(width=8, depth=512)"
+            }
+            r: "" {
+                grid-rows: 2
+                grid-gap: 0
+                csr
+                irq
+            }
+        }
+        out: "OutFIFOInterface" {
+            l: "" {
+                grid-rows: 1
+                grid-gap: 0
+                fifo: "FIFO" #"SyncFIFOBuffered(width=8, depth=512)"
+            }
+            r: "" {
+                grid-rows: 2
+                grid-gap: 0
+                csr
+                irq
+            }
+        }
+    }
+
+    r: "" {
+        grid-rows: 2
+        grid-gap: 0
+        bridge: "CSR Bridge" {
+            csr: "registers"
+        }
+        irq: "Peripheral Interrupts" {
+        }
+    }
+
+
+    #controller.csr <-> bridge.csr
+    #setup.csr <-> bridge.csr
+    #in.csr <-> irq
+    #out.csr <->irq
+
+    #controller.irq <-> irq
+    #setup.irq <-> irq
+    #in.irq <-> bridge.csr
+    #out.irq <-> bridge.csr
+
+}
+
+
+bus: "Wishbone Bus" {
+}
+
+cpu: "CPU or Wishbone" {
+}
+
+# - connections --
+
+#luna.device.control <- eptri.controller.control
+#luna.device.epi0    -> eptri.setup.fifo
+#luna.device.epi1    <- eptri.in.fifo
+#luna.device.epi2    -> eptri.out.fifo
+
+#eptri.bridge <-> bus
+#eptri.irq -> cpu
+
+#eptri.controller.csr <-> bus
+#eptri.setup.csr      <-> bus
+#eptri.in.csr         <-> bus
+#eptri.out.csr        <-> bus
+
+
+bus <-> cpu
