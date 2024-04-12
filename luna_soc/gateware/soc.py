@@ -269,7 +269,7 @@ class LunaSoC(CoreSoC):
 
         This is usually used for e.g. building our BIOS.
 
-        Parmeters:
+        Parameters:
             name      -- The name for the SoC design.
             build_dir -- The directory where our main Amaranth build is being performed.
                          We'll build in a subdirectory of it.

@@ -29,7 +29,7 @@ class SetupFIFOInterface(Peripheral, Elaboratable):
     control packets. [USB2.0: 8.6.1]
 
     Attributes
-    -----
+    ----------
 
     interface: EndpointInterface
         Our primary interface to the core USB device hardware.
@@ -166,7 +166,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
 
 
     Attributes
-    -----
+    ----------
 
     interface: EndpointInterface
         Our primary interface to the core USB device hardware.
@@ -487,13 +487,21 @@ class OutFIFOInterface(Peripheral, Elaboratable):
     Implements the OUT FIFO, which handles receiving packets from our host.
 
     Attributes
-    -----
+    ----------
 
     interface: EndpointInterface
         Our primary interface to the core USB device hardware.
     """
 
     def __init__(self, max_packet_size=512):
+        """
+        Parameters
+        ----------
+            max_packet_size: int, optional
+                Sets the maximum packet size that can be transmitted on this endpoint.
+                This should match the value provided in the relevant endpoint descriptor.
+        """
+
         super().__init__()
 
         self._max_packet_size = max_packet_size
