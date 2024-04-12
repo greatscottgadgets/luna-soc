@@ -1,0 +1,60 @@
+grid-columns: 1
+
+disconnect: "Disconnect Device" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    cpu:    "CPU / SoC"
+
+    disable_irqs: "Disable interrupt events." {
+        cpu -> eptri: "w(USBx.ev_enable, 0)"
+        cpu -> eptri: "w(USBx_EP_CONTROL.ev_enable, 0)"
+        cpu -> eptri: "w(USBx_EP_IN.ev_enable, 0)"
+        cpu -> eptri: "w(USBx_EP_OUT.ev_enable, 0)"
+    }
+
+    reset_fifos: "Reset FIFO's" {
+        cpu -> eptri: "w(USBx_EP_CONTROL.reset, 1)"
+        cpu -> eptri: "w(USBx_EP_IN.reset, 1)"
+        cpu -> eptri: "w(USBx_EP_OUT.reset, 1)"
+    }
+
+    disconnect: "Disconnect device controller." {
+        cpu -> eptri: "w(USBx.connect, 0)"
+    }
+
+    reset_address: "Reset device address to 0." {
+        cpu -> eptri: "w(USBx_EP_OUT.address, 0)"
+        cpu -> eptri: "w(USBx_EP_CONTROL.address, 0)"
+    }
+}
+
+connect: "Connect Device" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    cpu:    "CPU / SoC"
+
+    set_speed: "Set device speed." {
+        cpu.|
+            High speed: 0, 0
+            Full speed: 1, 0
+            Low  speed: 0, 1
+        |
+        cpu -> eptri: "w(USBx.full_speed_only, 0)"
+        cpu -> eptri: "w(USBx.low_speed_only, 0)"
+    }
+
+    connect: "Connect device controller." {
+        cpu -> eptri: "w(USBx.connect, 1)"
+    }
+
+    enable_irqs: "Re-enable interrupt events." {
+        cpu -> eptri: "w(USBx.ev_enable, 1)"
+        cpu -> eptri: "w(USBx_EP_CONTROL.ev_enable, 1)"
+        cpu -> eptri: "w(USBx_EP_IN.ev_enable, 1)"
+        cpu -> eptri: "w(USBx_EP_OUT.ev_enable, 1)"
+    }
+}

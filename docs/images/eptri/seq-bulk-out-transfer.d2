@@ -32,7 +32,7 @@ bulk_out_transfer: "Bulk OUT Transfer" {
         host <- eptri:  "PID ACK"
     }
 
-    # trigger interrupt: EP_OUT (ReceivePacket)
+    # trigger interrupt: IRQ_EP_OUT (ReceivePacket)
     irq1: "Trigger Interrupt: IRQ_EP_OUT (ReceivePacket)" {
         eptri -> cpu:   "IRQ_EP_OUT"
     }
@@ -44,7 +44,7 @@ bulk_out_transfer: "Bulk OUT Transfer" {
         host <- eptri: "PID NAK"
     }
 
-    # handle interrupt: EP_OUT (ReceivePacket)
+    # handle interrupt: IRQ_EP_OUT (ReceivePacket)
     irq1: "Handle Interrupt: IRQ_EP_OUT (ReceivePacket)" {
         get_ep: "get transfer endpoint number" {
             cpu -> eptri: "r(EP_OUT.data_ep)"

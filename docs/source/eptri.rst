@@ -158,17 +158,18 @@ The following pseudo-code is used through-out to indicate register operations:
   * - ``w(PERIPHERAL.register, bits)``
     - Write ``bits`` to the ``register`` belonging to ``PERIPHERAL``.
 
-Bulk OUT Transfers
+
+Device Connection
 ~~~~~~~~~~~~~~~~~~
 
-.. image:: ../images/eptri/seq-bulk-out-transfer.svg
-  :alt: Sequence diagram for Bulk OUT transfers
+.. image:: ../images/eptri/seq-connect.svg
+  :alt: Sequence diagram for USB device connection
 
-Bulk IN Transfers
-~~~~~~~~~~~~~~~~~
+Bus Reset
+~~~~~~~~~
 
-.. image:: ../images/eptri/seq-bulk-in-transfer.svg
-  :alt: Sequence diagram for Bulk IN transfers
+.. image:: ../images/eptri/seq-bus-reset.svg
+  :alt: Sequence diagram for USB bus reset
 
 Control OUT Transfers
 ~~~~~~~~~~~~~~~~~~~~~
@@ -181,3 +182,15 @@ Control IN Transfers
 
 .. image:: ../images/eptri/seq-control-in-transfer.svg
   :alt: Sequence diagram for Control IN transfers
+
+Bulk OUT Transfers
+~~~~~~~~~~~~~~~~~~
+
+.. image:: ../images/eptri/seq-bulk-out-transfer.svg
+  :alt: Sequence diagram for Bulk OUT transfers
+
+Bulk IN Transfers
+~~~~~~~~~~~~~~~~~
+
+.. image:: ../images/eptri/seq-bulk-in-transfer.svg
+  :alt: Sequence diagram for Bulk IN transfers

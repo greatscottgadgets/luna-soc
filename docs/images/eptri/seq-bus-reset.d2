@@ -1,0 +1,52 @@
+bus_reset: "Bus Reset" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    cpu:    "CPU / SoC"
+
+    # usb: bus reset
+    usb1: "Bus Reset" {
+        host -> eptri: "RESET"
+    }
+
+    # trigger interrupt: IRQ_USBx (BusReset)
+    irq1: "Trigger Interrupt: IRQ_USBx (BusReset)" {
+        eptri -> cpu:   "IRQ_USBx"
+    }
+
+    # handle interrupt: IRQ_USBx (BusReset)
+    irq1: "Handle Interrupt: IRQ_USBx (BusReset)" {
+        clear_pending_irqs: "clear pending interrupt events" {
+            cpu -> eptri: "w(USBx.ev_pending, r(USBx.ev_pending))"
+            cpu -> eptri: "w(USBx_EP_CONTROL.ev_pending, r(USBx_EP_CONTROL.ev_pending))"
+            cpu -> eptri: "w(USBx_EP_IN.ev_pending, r(USBx_EP_IN.ev_pending))"
+            cpu -> eptri: "w(USBx_EP_OUT.ev_pending, r(USBx_EP_OUT.ev_pending))"
+        }
+
+        disable_irqs: "disable interrupt events" {
+            cpu -> eptri: "w(USBx.ev_enable, 0)"
+            cpu -> eptri: "w(USBx_EP_CONTROL.ev_enable, 0)"
+            cpu -> eptri: "w(USBx_EP_IN.ev_enable, 0)"
+            cpu -> eptri: "w(USBx_EP_OUT.ev_enable, 0)"
+        }
+
+        reset_address: "reset device address to 0" {
+            cpu -> eptri: "w(USBx_EP_OUT.address, 0)"
+            cpu -> eptri: "w(USBx_EP_CONTROL.address, 0)"
+        }
+
+        reset_fifos: "reset FIFO's" {
+            cpu -> eptri: "w(USBx_EP_CONTROL.reset, 1)"
+            cpu -> eptri: "w(USBx_EP_IN.reset, 1)"
+            cpu -> eptri: "w(USBx_EP_OUT.reset, 1)"
+        }
+
+        enable_irqs: "re-enable interrupt events" {
+            cpu -> eptri: "w(USBx.ev_enable, 1)"
+            cpu -> eptri: "w(USBx_EP_CONTROL.ev_enable, 1)"
+            cpu -> eptri: "w(USBx_EP_IN.ev_enable, 1)"
+            cpu -> eptri: "w(USBx_EP_OUT.ev_enable, 1)"
+        }
+    }
+}
