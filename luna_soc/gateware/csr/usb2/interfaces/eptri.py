@@ -29,7 +29,7 @@ class SetupFIFOInterface(Peripheral, Elaboratable):
     control packets. [USB2.0: 8.6.1]
 
     Attributes
-    -----
+    ----------
 
     interface: EndpointInterface
         Our primary interface to the core USB device hardware.
@@ -47,16 +47,16 @@ class SetupFIFOInterface(Peripheral, Elaboratable):
         self.data = regs.csr(8, "r", desc="""
             A FIFO that returns the bytes from the most recently captured SETUP packet.
             Reading a byte from this register advances the FIFO. The first eight bytes read
-            from this conain the core SETUP packet.
+            from this contain the core SETUP packet.
         """)
 
         self.reset = regs.csr(1, "w", desc="""
             Local reset control for the SETUP handler; writing a '1' to this register clears the handler state.
         """)
 
-        self.epno = regs.csr(4, "r", desc="The number of the endpoint associated with the current SETUP packet.")
+        self.epno = regs.csr(4, "r", desc="The endpoint number associated with the most recently captured SETUP packet.")
         self.have = regs.csr(1, "r", desc="`1` iff data is available in the FIFO.")
-        self.pend = regs.csr(1, "r", desc="`1` iff an interrupt is pending")
+        self.pend = regs.csr(1, "r", desc="`1` iff an interrupt is pending") # TODO unused
 
 
         # TODO: figure out where this should actually go to match ValentyUSB as much as possible
@@ -166,7 +166,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
 
 
     Attributes
-    -----
+    ----------
 
     interface: EndpointInterface
         Our primary interface to the core USB device hardware.
@@ -219,7 +219,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
 
         self.idle = regs.csr(1, "r", desc="This value is `1` if no packet is actively being transmitted.")
         self.have = regs.csr(1, "r", desc="This value is `1` if data is present in the transmit FIFO.")
-        self.pend = regs.csr(1, "r", desc="`1` iff an interrupt is pending")
+        self.pend = regs.csr(1, "r", desc="`1` iff an interrupt is pending") # TODO unused
         self.pid  = regs.csr(1, "rw", desc="Contains the current PID toggle bit for the given endpoint.")
 
         self.nak  = regs.csr(16, "r", desc="""
@@ -487,13 +487,21 @@ class OutFIFOInterface(Peripheral, Elaboratable):
     Implements the OUT FIFO, which handles receiving packets from our host.
 
     Attributes
-    -----
+    ----------
 
     interface: EndpointInterface
         Our primary interface to the core USB device hardware.
     """
 
     def __init__(self, max_packet_size=512):
+        """
+        Parameters
+        ----------
+            max_packet_size: int, optional
+                Sets the maximum packet size that can be transmitted on this endpoint.
+                This should match the value provided in the relevant endpoint descriptor.
+        """
+
         super().__init__()
 
         self._max_packet_size = max_packet_size
@@ -549,7 +557,7 @@ class OutFIFOInterface(Peripheral, Elaboratable):
 
 
         self.have = regs.csr(1, "r", desc="`1` iff data is available in the FIFO.")
-        self.pend = regs.csr(1, "r", desc="`1` iff an interrupt is pending")
+        self.pend = regs.csr(1, "r", desc="`1` iff an interrupt is pending") # TODO unused
 
         # TODO: figure out where this should actually go to match ValentyUSB as much as possible
         self._address = regs.csr(8, "rw", desc="""

@@ -25,9 +25,9 @@ class Introspect:
 
         Yields (MemoryMap, ResourceInfo, address, size) for each resource.
 
-        Parameters:
-            omit_bios_mem -- If True, BIOS-related memories are skipped when generating our
-                             resource listings. This hides BIOS resources from the application.
+        Args:
+            omit_bios_mem : If True, BIOS-related memories are skipped when generating our
+                            resource listings. This hides BIOS resources from the application.
         """
 
         # Grab the memory map for this SoC...
@@ -61,9 +61,9 @@ class Introspect:
 
     def range_for_peripheral(self, target_peripheral: lambdasoc.periph.Peripheral):
         """ Returns size information for the given peripheral.
+
         Returns:
-            addr, size -- if the given size is known; or
-            None, None    if not
+            addr, size : if the given size is known; or None, None if not
         """
 
         # Grab the memory map for this SoC...
@@ -80,9 +80,9 @@ class Introspect:
 
     def irq_for_peripheral_window(self, target_peripheral_window: amaranth_soc.memory.MemoryMap):
         """ Returns any interrupt associated with the given peripheral.
+
         Returns:
-            irqno, peripheral -- if the given peripheral has an interrupt; or
-            None, None    if not
+            irqno, peripheral : if the given peripheral has an interrupt; or None, None if not
         """
         for irqno, peripheral in self._soc._interrupt_map.items():
             if peripheral.name is target_peripheral_window.name:

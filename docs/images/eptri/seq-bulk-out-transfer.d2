@@ -1,0 +1,65 @@
+bulk_out_transfer: "Bulk OUT Transfer" {
+    shape: sequence_diagram
+
+    host:   "HOST"
+    eptri:  "EPTRI"
+    cpu:    "CPU / SoC"
+
+    # usb transaction: NAK EP_OUT
+    usb1: "EPTRI EP_OUT will NAK host until it is primed to receive." {
+        host -> eptri: "PID OUT"
+        host -> eptri: "PID DATAn bytes=[u8]"
+        host <- eptri: "PID NAK"
+    }
+
+    # cpu: prime EP_OUT
+    cpu1: "Prime EP_OUT when you're ready to receive data on an endpoint." {
+        select: "select the endpoint to prime" {
+            cpu -> eptri: "w(EP_OUT.epno, endpoint_number)"
+        }
+        prime: "prime the endpoint" {
+            cpu -> eptri: "w(EP_OUT.prime, true)"
+        }
+        enable: "re-enable the interface" {
+            cpu -> eptri: "w(EP_OUT.enable, true)"
+        }
+    }
+
+    # usb transaction: OUT data transfer
+    usb2: "EPTRI EP_OUT accepts data transfer from host." {
+        host -> eptri:  "PID OUT"
+        host -> eptri:  "PID DATAn bytes=[u8]"
+        host <- eptri:  "PID ACK"
+    }
+
+    # trigger interrupt: IRQ_EP_OUT (ReceivePacket)
+    irq1: "Trigger Interrupt: IRQ_EP_OUT (ReceivePacket)" {
+        eptri -> cpu:   "IRQ_EP_OUT"
+    }
+
+    # usb transaction: NAK EP_OUT
+    usb3: "EPTRI EP_OUT will NAK host until it is re-primed." {
+        host -> eptri: "PID OUT"
+        host -> eptri: "PID DATAn bytes=[u8]"
+        host <- eptri: "PID NAK"
+    }
+
+    # handle interrupt: IRQ_EP_OUT (ReceivePacket)
+    irq1: "Handle Interrupt: IRQ_EP_OUT (ReceivePacket)" {
+        get_ep: "get transfer endpoint number" {
+            cpu -> eptri: "r(EP_OUT.data_ep)"
+            cpu <- eptri: "endpoint_number"
+        }
+        read_fifo: "while the FIFO has data, read the next byte" {
+            cpu -> eptri: "while r(EP_OUT.have) {"
+            cpu <- eptri: "bool"
+            cpu -> eptri: "r(EP_OUT.data)"
+            cpu <- eptri: "u8"
+        }
+        prime: "finally, re-prime EP_OUT if you're ready to\nreceive more data on the endpoint" {
+            cpu -> eptri: "w(EP_OUT.epno, endpoint_number)"
+            cpu -> eptri: "w(EP_OUT.prime, true)"
+            cpu -> eptri: "w(EP_OUT.enable, true)"
+        }
+    }
+}
