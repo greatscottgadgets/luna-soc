@@ -12,13 +12,14 @@ import spinal.core.internals.{
   PhaseContext
 }
 import spinal.lib._
+import spinal.lib.cpu.riscv.debug.DebugTransportModuleParameter
 import spinal.lib.sim.Phase
 
 import scala.collection.mutable.ArrayBuffer
 
-object GenCoreCynthion {
+object GenCoreCynthionJtag {
   def main(args: Array[String]) {
-    val outputFile = "vexriscv_cynthion"
+    val outputFile = "vexriscv_cynthion+jtag"
     val spinalConfig =
       LunaSpinalConfig.copy(netlistFileName = outputFile + ".v")
 
@@ -98,7 +99,7 @@ object GenCoreCynthion {
           catchAddressMisaligned = true
         ),
         new CsrPlugin(
-          CsrPluginConfig.all(mtvecInit = null).copy(ebreakGen = true, xtvecModeGen = false)
+          CsrPluginConfig.all(mtvecInit = null).copy(ebreakGen = true, xtvecModeGen = false, withPrivilegedDebug = true)
         ),
         new YamlPlugin(outputFile + ".yaml"),
         new MulPlugin,
@@ -108,6 +109,16 @@ object GenCoreCynthion {
           machinePendingsCsrId = 0xfc0,
           supervisorMaskCsrId = 0x9c0,
           supervisorPendingsCsrId = 0xdc0
+        ),
+        new EmbeddedRiscvJtag(
+          p = DebugTransportModuleParameter(
+            addressWidth = 7,
+            version = 1,
+            idle = 7
+          ),
+          debugCd = ClockDomain.current.copy(reset = Bool().setName("debugReset")),
+          withTunneling = false,
+          withTap = true
         )
       )
 

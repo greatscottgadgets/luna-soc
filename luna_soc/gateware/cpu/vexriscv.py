@@ -17,11 +17,13 @@ import logging
 # Variants --------------------------------------------------------------------
 
 CPU_VARIANTS = {
-    "cynthion":     "vexriscv_cynthion",
-    "imac+dcache":  "vexriscv_imac+dcache",
-    "imac+litex":   "vexriscv_imac+litex",
-    "imc":          "vexriscv_imc",
+    "cynthion":      "vexriscv_cynthion",
+    "cynthion+jtag": "vexriscv_cynthion+jtag",
+    "imac+dcache":   "vexriscv_imac+dcache",
+    "imc":           "vexriscv_imc",
 }
+
+JTAG_VARIANTS = [ "cynthion+jtag" ]
 
 # - VexRiscv ------------------------------------------------------------------
 
@@ -36,17 +38,28 @@ class VexRiscv(CPU, Elaboratable):
                  reset_addr=0x00000000):
         super().__init__()
 
+        self._variant    = variant
         self._reset_addr = reset_addr
 
         # ports
-        self.ext_reset = Signal()
+        self.ext_reset    = Signal()
         self.irq_external = Signal(32)
         self.irq_timer    = Signal()
         self.irq_software = Signal()
-        self.ibus  = wishbone.Interface(addr_width=30, data_width=32, granularity=8,
-                                        features={"cti", "bte", "err"})
-        self.dbus  = wishbone.Interface(addr_width=30, data_width=32, granularity=8,
-                                        features={"cti", "bte", "err"})
+        self.ibus = wishbone.Interface(addr_width=30, data_width=32, granularity=8,
+                                       features={"cti", "bte", "err"})
+        self.dbus = wishbone.Interface(addr_width=30, data_width=32, granularity=8,
+                                       features={"cti", "bte", "err"})
+
+        # optional jtag port
+        if variant in JTAG_VARIANTS:
+            self.jtag_tms  = Signal()
+            self.jtag_tdi  = Signal()
+            self.jtag_tdo  = Signal()
+            self.jtag_tck  = Signal()
+            self.dbg_reset = Signal()
+            self.ndm_reset = Signal()
+            self.stop_time = Signal()
 
         # read source verilog
         if not variant in CPU_VARIANTS:
@@ -84,10 +97,24 @@ class VexRiscv(CPU, Elaboratable):
         i_clk       = ClockSignal("sync")
         i_reset     = ResetSignal("sync") | self.ext_reset
 
+        # optional signals
+        optional_signals = {}
+        if self._variant in JTAG_VARIANTS:
+            optional_signals = {
+                "i_jtag_tms":   self.jtag_tms,
+                "i_jtag_tdi":   self.jtag_tdi,
+                "o_jtag_tdo":   self.jtag_tdo,
+                "i_jtag_tck":   self.jtag_tck,
+                "i_debugReset": self.dbg_reset,
+                "o_ndmreset":   self.ndm_reset,
+                "o_stoptime":   self.stop_time,
+            }
+
         # instantiate VexRiscv
         platform.add_file(self._source_file, self._source_verilog)
         self._cpu = Instance(
             "VexRiscv",
+
             # clock and reset
             i_clk                    = i_clk,
             i_reset                  = i_reset,
@@ -123,6 +150,9 @@ class VexRiscv(CPU, Elaboratable):
             i_dBusWishbone_DAT_MISO  = self.dbus.dat_r,
             i_dBusWishbone_ACK       = self.dbus.ack,
             i_dBusWishbone_ERR       = self.dbus.err,
+
+            # optional signals
+            **optional_signals,
         )
 
         m.submodules.vexriscv = self._cpu

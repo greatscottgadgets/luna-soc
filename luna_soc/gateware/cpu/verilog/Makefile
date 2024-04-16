@@ -1,8 +1,12 @@
-all: cynthion imc imac+dcache
+all: cynthion cynthion+jtag imc imac+dcache
 
 cynthion:
 	cd vexriscv/scala && sbt compile "runMain lunasoc.GenCoreCynthion"
 	mv vexriscv/scala/vexriscv_cynthion.* vexriscv/
+
+cynthion+jtag:
+	cd vexriscv/scala && sbt compile "runMain lunasoc.GenCoreCynthionJtag"
+	mv vexriscv/scala/vexriscv_cynthion+jtag.* vexriscv/
 
 imc:
 	cd vexriscv/scala && sbt compile "runMain lunasoc.GenCoreImc"
