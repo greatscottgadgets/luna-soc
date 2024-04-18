@@ -9,3 +9,4 @@ from .gpio import *
 from .led  import *
 from .sram import *
 from .uart import *
+from .usb2 import *

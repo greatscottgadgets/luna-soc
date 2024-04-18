@@ -17,6 +17,9 @@ from luna.gateware.usb.usb2.device import USBDevice
 
 from ..base import Peripheral
 
+__all__ = ["USBDeviceController"]
+
+
 class USBDeviceController(Peripheral, Elaboratable):
     """ SoC controller for a USBDevice.
 

@@ -8,6 +8,8 @@ from amaranth               import Cat, Elaboratable, Module, Signal, Record
 from lambdasoc.periph       import Peripheral
 from luna.gateware.platform import NullPin
 
+__all__ = ["LedPeripheral"]
+
 class LedPeripheral(Peripheral, Elaboratable):
     """ Example peripheral that controls the board's LEDs. """
 

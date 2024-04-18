@@ -19,6 +19,9 @@ from luna.gateware.usb.usb2.endpoint import EndpointInterface
 
 from ...base import Peripheral
 
+__all__ = ["SetupFIFOInterface", "InFIFOInterface", "OutFIFOInterface"]
+
+
 class SetupFIFOInterface(Peripheral, Elaboratable):
     """ Setup component of our `eptri`-equivalent interface.
 
