@@ -6,10 +6,7 @@
 
 """VexRiscv SoC for LUNA firmware."""
 
-from .cpu.vexriscv     import VexRiscv
-from .csr.sram         import SRAMPeripheral as SRAMPeripheralWithACK
-from .wishbone.memory  import WishboneRAM, WishboneROM
-from ..generate        import Introspect
+import logging
 
 from amaranth                import *
 from amaranth.build          import *
@@ -30,7 +27,10 @@ from lambdasoc.soc.cpu       import CPUSoC, BIOSBuilder
 from lambdasoc.sim.platform          import CXXRTLPlatform
 from lambdasoc.sim.blackboxes.serial import AsyncSerial_Blackbox
 
-import logging
+from .cpu.vexriscv     import VexRiscv
+from .csr.sram         import SRAMPeripheral as SRAMPeripheralWithACK
+from .wishbone.memory  import WishboneRAM, WishboneROM
+from ..generate        import Introspect
 
 
 # - CoreSoC -------------------------------------------------------------------
@@ -147,7 +147,7 @@ class LunaSoC(CoreSoC):
     # - LunaSoC user api --
 
     # TODO move internal_sram_addr and internal_sram_size here
-    def add_bios_and_peripherals(self, uart_pins, uart_baud_rate=115200, fixed_addresses=False):
+    def add_bios_and_peripherals(self, uart_pins, uart_baud_rate=115200):
         """ Adds a simple BIOS that allows loading firmware, and the requisite peripherals.
 
         Automatically adds the following peripherals:
@@ -170,13 +170,13 @@ class LunaSoC(CoreSoC):
         internal_sram_size = self.internal_sram_size
         internal_sram_addr = self.internal_sram_addr
 
-        # timer configuration
+        # timer0 configuration
         timer_addr  = 0xf0000100
         timer_width = 32
         timer_irqno = self._interrupt_index
         self._interrupt_index += 1
 
-        # uart configuration
+        # uart0 configuration
         uart_addr  = 0xf0000200
         uart_irqno = self._interrupt_index
         self._interrupt_index += 1
