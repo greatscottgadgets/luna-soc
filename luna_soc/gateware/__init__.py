@@ -4,4 +4,4 @@
 # Copyright (c) 2020 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from .soc import LunaSoC
+from .lunasoc import LunaSoC

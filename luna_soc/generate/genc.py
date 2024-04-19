@@ -8,12 +8,12 @@
 
 import datetime
 
-from lambdasoc.soc.cpu       import CPUSoC
+from ..gateware.lunasoc import LunaSoC
 
 
 class GenC():
 
-    def __init__(self, soc: CPUSoC):
+    def __init__(self, soc: LunaSoC):
         self._soc = soc
 
 
@@ -232,17 +232,17 @@ class GenC():
         # TODO - check all memories
 
         # Add regions for our main ROM and our main RAM.
-        if self._soc.bootrom:
+        if hasattr(self._soc, "bootrom"):
             start, size = self._soc.range_for_peripheral(self._soc.bootrom)
             if size:
                 emit(f"    rom : ORIGIN = 0x{start:08x}, LENGTH = 0x{size:08x}")
 
-        if self._soc.scratchpad:
+        if hasattr(self._soc, "scratchpad"):
             start, size = self._soc.range_for_peripheral(self._soc.scratchpad)
             if size:
                 emit(f"    scratchpad : ORIGIN = 0x{start:08x}, LENGTH = 0x{size:08x}")
 
-        if self._soc.mainram:
+        if hasattr(self._soc, "mainram"):
             start, size = self._soc.range_for_peripheral(self._soc.mainram)
             if size:
                 emit(f"    ram : ORIGIN = 0x{start:08x}, LENGTH = 0x{size:08x}")

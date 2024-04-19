@@ -7,12 +7,15 @@
 """Introspection tools for SoC designs."""
 
 import amaranth_soc
-import lambdasoc
 import logging
+
+from ..gateware.lunasoc import LunaSoC
+
+from ..gateware.vendor.lambdasoc.periph  import Peripheral
 
 
 class Introspect:
-    def __init__(self, soc: lambdasoc.soc.cpu.CPUSoC):
+    def __init__(self, soc: LunaSoC):
         self._soc = soc
 
     # - public API --
@@ -59,7 +62,7 @@ class Introspect:
                 yield window, resource_info, window_start + register_offset, size
 
 
-    def range_for_peripheral(self, target_peripheral: lambdasoc.periph.Peripheral):
+    def range_for_peripheral(self, target_peripheral: Peripheral):
         """ Returns size information for the given peripheral.
 
         Returns:
@@ -117,7 +120,7 @@ class Introspect:
         logging.info("")
 
         # Main memory.
-        if self._soc.mainram:
+        if hasattr(self._soc, "mainram"):
             memory_location = self.main_ram_address()
             logging.info(f"Main memory at 0x{memory_location:08x}; upload using:")
             logging.info(f"    flterm --kernel <your_firmware> --kernel-addr 0x{memory_location:08x} --speed 115200")
@@ -128,8 +131,8 @@ class Introspect:
 
     def main_ram_address(self):
         """ Returns the address of the main system RAM. """
-        if self._soc.mainram is None:
-            start, _  = self.range_for_peripheral(self._soc.scratchpad)
-        else:
+        if hasattr(self._soc, "mainram"):
             start, _  = self.range_for_peripheral(self._soc.mainram)
+        else:
+            start, _  = self.range_for_peripheral(self._soc.scratchpad)
         return start
