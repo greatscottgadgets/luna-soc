@@ -41,11 +41,6 @@ $(TARGET).o: build/genc/soc.ld build/genc/resources.h $(SOURCES) $(TARGET).ld
 $(TARGET).bin: $(TARGET).o
 	$(OBJCOPY) -O binary $< $@
 
-# - gateware ------------------------------------------------------------------
-
-$(TARGET).bit: $(TARGET).bin $(SOC)
-	./$(SOC) --dry-run --output $@
-
 # - generated files -----------------------------------------------------------
 
 build/genc/resources.h: $(SOC)
@@ -55,6 +50,11 @@ build/genc/resources.h: $(SOC)
 build/genc/soc.ld: $(SOC)
 	mkdir -p build/genc/
 	./$(SOC) --generate-ld-script > $@
+
+# - gateware ------------------------------------------------------------------
+
+$(TARGET).bit: $(TARGET).bin $(SOC)
+	./$(SOC) --dry-run --output $@
 
 # - helpers -------------------------------------------------------------------
 
