@@ -5,10 +5,10 @@ use lunasoc_pac as pac;
 use lunasoc_hal as hal;
 
 use hal::hal::delay::DelayUs;
-use hal::Serial;
-use hal::Timer;
+use hal::Serial0;
+use hal::Timer0;
 
-use log::{debug, info};
+use log::info;
 
 use panic_halt as _;
 use riscv_rt::entry;
@@ -25,10 +25,10 @@ fn main() -> ! {
     let leds = &peripherals.LEDS;
 
     // initialize logging
-    let serial = Serial::new(peripherals.UART);
+    let serial = Serial0::new(peripherals.UART);
     hello_rust::log::init(serial);
 
-    let mut timer = Timer::new(peripherals.TIMER, pac::clock::sysclk());
+    let mut timer = Timer0::new(peripherals.TIMER, pac::clock::sysclk());
     let mut counter = 0;
     let mut direction = true;
     let mut led_state = 0b110000;
@@ -36,7 +36,7 @@ fn main() -> ! {
     info!("Peripherals initialized, entering main loop.");
 
     loop {
-        timer.delay_ms(1000).unwrap();
+        timer.delay_ms(100).unwrap();
 
         if direction {
             led_state >>= 1;
@@ -48,11 +48,11 @@ fn main() -> ! {
             led_state <<= 1;
             if led_state == 0b110000 {
                 direction = true;
-                debug!("right: {}", counter);
+                info!("right: {}", counter);
             }
         }
 
-        leds.output.write(|w| unsafe { w.output().bits(led_state) });
+        leds.output().write(|w| unsafe { w.output().bits(led_state) });
         counter += 1;
     }
 }
