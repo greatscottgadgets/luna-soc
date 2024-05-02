@@ -4,20 +4,22 @@
 # Copyright (c) 2020 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from luna                                        import configure_default_logging, top_level_cli
-from luna.gateware.usb.usb2.device               import USBDevice
-
-from luna_soc.gateware.soc                       import LunaSoC
-from luna_soc.gateware.csr                       import GpioPeripheral, LedPeripheral
-
-from amaranth                                    import Elaboratable, Module, Cat
-from amaranth.hdl.rec                            import Record
-
-from lambdasoc.cpu.minerva                       import MinervaCPU
-
 import logging
 import os
 import sys
+
+from luna                            import configure_default_logging
+from luna.gateware.usb.usb2.device   import USBDevice
+
+from amaranth                        import Elaboratable, Module, Cat
+from amaranth.hdl.rec                import Record
+
+from luna_soc.gateware.cpu.minerva   import Minerva
+from luna_soc.gateware.csr           import GpioPeripheral, LedPeripheral
+from luna_soc.gateware.lunasoc       import LunaSoC
+
+from luna_soc.util.readbin           import get_mem_data
+
 
 CLOCK_FREQUENCIES_MHZ = {
     'sync': 60
@@ -38,7 +40,7 @@ class HelloSoc(Elaboratable):
         internal_sram_addr = 0x40000000
         internal_sram_size = 32768
         self.soc = LunaSoC(
-            cpu=MinervaCPU(
+            cpu=Minerva(
                 with_debug    = False,
                 with_icache   = True,
                 icache_nlines = 16,
@@ -53,15 +55,21 @@ class HelloSoc(Elaboratable):
                 dcache_base   = internal_sram_addr,
                 dcache_limit  = internal_sram_addr + internal_sram_size,
                 with_muldiv   = False,
-                reset_address = 0x00000000,
+                reset_address = internal_sram_addr,
             ),
             clock_frequency=clock_frequency,
-            internal_sram_addr=internal_sram_addr,
-            internal_sram_size=internal_sram_size,
         )
 
-        # ... add bios and core peripherals ...
-        self.soc.add_bios_and_peripherals(uart_pins=self.uart_pins)
+        # ... read our firmware binary ...
+        firmware = get_mem_data("firmware.bin", data_width=32, endianness="little")
+
+        # ... add core peripherals: memory, timer, uart ...
+        self.soc.add_core_peripherals(
+            uart_pins=self.uart_pins,
+            internal_sram_addr=internal_sram_addr,
+            internal_sram_size=internal_sram_size,
+            internal_sram_init=firmware,
+        )
 
         # ... add our LED peripheral, for simple output.
         self.leds = LedPeripheral()
@@ -88,70 +96,8 @@ class HelloSoc(Elaboratable):
 
 # - main ----------------------------------------------------------------------
 
-from luna.gateware.platform import get_appropriate_platform
-
-from luna_soc.generate      import Generate, Introspect
-
 if __name__ == "__main__":
-    # disable UnusedElaborable warnings
-    from amaranth._unused import MustUse
-    MustUse._MustUse__silence = True
+    from luna_soc import top_level_cli
 
-    build_dir = os.path.join("build")
-
-    # configure logging
-    configure_default_logging()
-    logging.getLogger().setLevel(logging.DEBUG)
-
-    # select platform
-    platform = get_appropriate_platform()
-    if platform is None:
-        logging.error("Failed to identify a supported platform")
-        sys.exit(1)
-
-    # configure clock frequency
-    clock_frequency = int(platform.default_clk_frequency)
-    logging.info(f"Platform clock frequency: {clock_frequency}")
-
-    # create design
-    design = HelloSoc(clock_frequency=clock_frequency)
-
-    # TODO fix litex build
-    thirdparty = os.path.join(build_dir, "lambdasoc.soc.cpu/bios/3rdparty/litex")
-    if not os.path.exists(thirdparty):
-        logging.info("Fixing build, creating output directory: {}".format(thirdparty))
-        os.makedirs(thirdparty)
-
-    # build litex bios
-    logging.info("Building bios")
-    design.soc.build(name="soc",
-                     build_dir=build_dir,
-                     do_init=True)
-
-    # build soc
-    logging.info("Building soc")
-    overrides = {
-        "debug_verilog": True,
-        "verbose": False,
-    }
-    products = platform.build(design, do_program=False, build_dir=build_dir, **overrides)
-
-    # log resources and prepare to generate artifacts
-    Introspect(design.soc).log_resources()
-    generate = Generate(design.soc)
-
-    # generate: c-header and ld-script
-    path = os.path.join(build_dir, "genc")
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    logging.info("Generating c-header and ld-script: {}".format(path))
-    with open(os.path.join(path, "resources.h"), "w") as f:
-        generate.c_header(platform_name=platform.name, file=f)
-    with open(os.path.join(path, "soc.ld"), "w") as f:
-        generate.ld_script(file=f)
-
-    print("Build completed. Use 'make load' to load bitstream to device.")
-
-    # TODO
-    #top_level_cli(design)
+    design = HelloSoc(clock_frequency=int(60e6))
+    top_level_cli(design)
