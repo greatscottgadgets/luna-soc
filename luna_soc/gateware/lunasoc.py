@@ -60,7 +60,6 @@ class LunaSoC(Elaboratable):
         self._interrupt_index = 0
         self._interrupt_map = {}
         self._peripherals = []
-        self._has_bios = False
 
     def add_core_peripherals(self, uart_pins, uart_baud_rate=115200, internal_sram_addr=0x40000000, internal_sram_size=int(32768), internal_sram_init=None):
 
@@ -164,9 +163,9 @@ class LunaSoC(Elaboratable):
 
     # - integration API -- TODO remove these entirely and call Introspect directly from generate/gen*
 
-    def resources(self, omit_bios_mem=True):
+    def resources(self):
         from ..generate        import Introspect
-        return Introspect(self).resources(omit_bios_mem)
+        return Introspect(self).resources()
 
     def range_for_peripheral(self, target_peripheral: Peripheral):
         from ..generate        import Introspect

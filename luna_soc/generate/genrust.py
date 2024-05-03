@@ -49,6 +49,8 @@ class GenRust:
         emit("}")
         emit("")
 
+        # TODO support an offset for spiflash
+
         # region aliases
         ram = "mainram"  if "mainram"  in regions else "scratchpad"
         rom = "spiflash" if "spiflash" in regions else ram

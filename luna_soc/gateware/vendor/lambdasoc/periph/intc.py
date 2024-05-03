@@ -36,8 +36,6 @@ class InterruptController(Peripheral):
         Raises :exn:`ValueError` if ``line`` is added twice, or if ``index`` is already used.
         """
         if not isinstance(line, IRQLine):
-            print(f"EXPECTING: {IRQLine}")
-            print(f"MINE:      {type(line)}")
             raise TypeError("IRQ line must be an instance of IRQLine, not {!r}"
                             .format(line))
         if not isinstance(index, int) or index < 0:

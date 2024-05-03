@@ -23,14 +23,10 @@ class Introspect:
     # TODO s/resources/peripherals
     # TODO attach irq to peripheral if there is one so we don't have to maintain it separately
     # TODO add a "memories()" ?
-    def resources(self, omit_bios_mem=True):
+    def resources(self):
         """ Creates an iterator over each of the device's addressable resources.
 
         Yields (MemoryMap, ResourceInfo, address, size) for each resource.
-
-        Args:
-            omit_bios_mem : If True, BIOS-related memories are skipped when generating our
-                            resource listings. This hides BIOS resources from the application.
         """
 
         # Grab the memory map for this SoC...
@@ -50,12 +46,6 @@ class Introspect:
                 register_offset = resource_info.start
                 register_end_offset = resource_info.end
                 _local_granularity = resource_info.width
-
-                # TODO
-                if False: #self._soc._build_bios and omit_bios_mem:
-                    # If we're omitting bios resources, skip the BIOS ram/rom.
-                    if (self._soc.mainram._mem is resource) or (self._soc.bootrom._mem is resource):
-                        continue
 
                 # ... and extract the peripheral's range/vitals...
                 size = register_end_offset - register_offset
@@ -122,10 +112,7 @@ class Introspect:
         # Main memory.
         if hasattr(self._soc, "mainram"):
             memory_location = self.main_ram_address()
-            logging.info(f"Main memory at 0x{memory_location:08x}; upload using:")
-            logging.info(f"    flterm --kernel <your_firmware> --kernel-addr 0x{memory_location:08x} --speed 115200")
-            logging.info("or")
-            logging.info(f"    lxterm --kernel <your_firmware> --kernel-adr 0x{memory_location:08x} --speed 115200")
+            logging.info(f"Main memory at: 0x{memory_location:08x}")
 
         logging.info("")
 

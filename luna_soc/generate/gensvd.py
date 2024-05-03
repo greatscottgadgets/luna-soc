@@ -41,7 +41,6 @@ class GenSVD:
 
         window: MemoryMap
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            print(window.name)
             if window.name in memories:
                 logging.debug("Skipping non-peripheral resource: {}".format(window.name))
                 continue
@@ -149,8 +148,6 @@ def _generate_section_peripheral(peripherals: Element, soc, window: MemoryMap, s
 
 def _generate_section_register(registers: Element, window: MemoryMap, resource_info: ResourceInfo):
     resource: amaranth_soc.csr.bus.Element = resource_info.resource
-    print(f"resource={type(resource)}  resource_info={type(resource_info)} ")
-    print(f"start={resource_info.start} end={resource_info.end}")
     assert type(resource) == amaranth_soc.csr.bus.Element
     from amaranth_soc.csr.bus import Element
 

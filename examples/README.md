@@ -35,7 +35,7 @@ Install cargo binutils support:
 
 ### RiscV GNU Toolchain
 
-This is needed to build litex-bios and any C examples:
+This is needed to build the C examples:
 
     # macOS - https://github.com/riscv-software-src/homebrew-riscv
     brew tap riscv-software-src/riscv
