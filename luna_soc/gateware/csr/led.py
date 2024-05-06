@@ -5,8 +5,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from amaranth               import Cat, Elaboratable, Module, Signal, Record
-from lambdasoc.periph       import Peripheral
 from luna.gateware.platform import NullPin
+
+from .base import Peripheral
 
 __all__ = ["LedPeripheral"]
 

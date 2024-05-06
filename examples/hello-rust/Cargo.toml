@@ -11,6 +11,6 @@ riscv-rt = { version = "=0.11.0" }
 panic-halt = "0.2.0"
 
 lunasoc-pac = { git = "https://github.com/greatscottgadgets/cynthion.git", default-features = false, features = ["critical-section", "vexriscv"]}
-lunasoc-hal = { git = "https://github.com/greatscottgadgets/cynthion.git", default-features = false, features = []}
+lunasoc-hal = { git = "https://github.com/greatscottgadgets/cynthion.git", default-features = false, features = ["vexriscv"]}
 
 log = "0.4.17"

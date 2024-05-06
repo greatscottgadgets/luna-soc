@@ -5,29 +5,32 @@
 # Copyright (c) 2020 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth                      import Cat, ClockSignal, Elaboratable, Module, ResetSignal
-from amaranth.hdl.rec              import Record
-
-from amaranth_stdio.serial         import AsyncSerial
-
-from lambdasoc.cpu.minerva         import MinervaCPU
-from lambdasoc.periph              import Peripheral
-from lambdasoc.periph.serial       import AsyncSerialPeripheral
-from lambdasoc.periph.timer        import TimerPeripheral
-
-from luna                          import configure_default_logging
-from luna.gateware.interface.psram import HyperRAMInterface
-from luna.gateware.interface.ulpi  import ULPIRegisterWindow
-from luna.gateware.usb.usb2.device import USBDevice
-
-from luna_soc.gateware.soc         import LunaSoC
-from luna_soc.gateware.csr         import GpioPeripheral, LedPeripheral, UARTPeripheral
-
-from luna_soc.util.readbin         import get_mem_data
-
 import logging
 import os
 import sys
+
+from amaranth                       import Cat, ClockSignal, Elaboratable, Module, ResetSignal
+from amaranth.hdl.rec               import Record
+
+from amaranth_stdio.serial          import AsyncSerial
+
+from luna                           import configure_default_logging
+from luna.gateware.interface.psram  import HyperRAMPHY, HyperRAMInterface
+from luna.gateware.interface.ulpi   import ULPIRegisterWindow
+from luna.gateware.usb.usb2.device  import USBDevice
+
+from luna_soc.gateware.cpu.minerva  import Minerva
+from luna_soc.gateware.csr          import GpioPeripheral, LedPeripheral, UARTPeripheral
+from luna_soc.gateware.lunasoc      import LunaSoC
+#from luna_soc.gateware.wishbone     import SRAMPeripheral
+
+from luna_soc.util.readbin          import get_mem_data
+
+from luna_soc.gateware.vendor.lambdasoc.periph        import Peripheral
+from luna_soc.gateware.vendor.lambdasoc.periph.serial import AsyncSerialPeripheral
+from luna_soc.gateware.vendor.lambdasoc.periph.sram   import SRAMPeripheral
+from luna_soc.gateware.vendor.lambdasoc.periph.timer  import TimerPeripheral
+
 
 # Run our tests at a slower clock rate, for now.
 # TODO: bump up the fast clock rate, to test the HyperRAM at speed?
@@ -77,9 +80,9 @@ class ULPIRegisterPeripheral(Peripheral, Elaboratable):
             ulpi_reg_window.ulpi_dir      .eq(target_ulpi.dir.i),
             ulpi_reg_window.ulpi_next     .eq(target_ulpi.nxt.i),
 
-            target_ulpi.clk               .eq(ClockSignal("usb")),
-            target_ulpi.rst               .eq(ResetSignal("usb")),
-            target_ulpi.stp               .eq(ulpi_reg_window.ulpi_stop),
+            target_ulpi.clk.o             .eq(ClockSignal("usb")),
+            target_ulpi.rst.o             .eq(ResetSignal("usb")),
+            target_ulpi.stp.o             .eq(ulpi_reg_window.ulpi_stop),
             target_ulpi.data.o            .eq(ulpi_reg_window.ulpi_data_out),
             target_ulpi.data.oe           .eq(~target_ulpi.dir.i)
         ]
@@ -144,11 +147,12 @@ class PSRAMRegisterPeripheral(Peripheral, Elaboratable):
         # HyperRAM interface window.
         #
         ram_bus = platform.request('ram')
-        m.submodules.psram = psram = HyperRAMInterface(bus=ram_bus, clock_skew=platform.ram_timings['clock_skew'])
+        m.submodules.psram_phy = psram_phy = HyperRAMPHY(bus=ram_bus)
+        m.submodules.psram = psram = HyperRAMInterface(phy=psram_phy.phy)
 
         # Hook up our PSRAM.
         m.d.comb += [
-            ram_bus.reset          .eq(0),
+            ram_bus.reset.o        .eq(0),
             psram.single_page      .eq(0),
             psram.perform_write    .eq(0),
             psram.register_space   .eq(1),
@@ -172,7 +176,7 @@ class PSRAMRegisterPeripheral(Peripheral, Elaboratable):
         #
 
         # Always report back the last read data.
-        with m.If(psram.new_data_ready):
+        with m.If(psram.read_ready):
             m.d.sync += self._value.r_data.eq(psram.read_data)
 
 
@@ -186,16 +190,18 @@ class PSRAMRegisterPeripheral(Peripheral, Elaboratable):
 
 # - SelftestCore --------------------------------------------------------------
 
-# TODO delete
-from lambdasoc.periph.sram   import SRAMPeripheral
-
 class SelftestCore(Elaboratable):
     def __init__(self):
+        # configure clock frequency
         clock_frequency = int(CLOCK_FREQUENCIES_MHZ["sync"] * 1e6)
 
         # create our SoC
         self.soc = LunaSoC(
-            cpu=MinervaCPU(with_muldiv=True, with_debug=False),
+            cpu=Minerva(
+                with_muldiv=True,
+                with_debug=False,
+                reset_address=0x00000000,
+            ),
             clock_frequency=clock_frequency,
         )
 
@@ -204,15 +210,15 @@ class SelftestCore(Elaboratable):
 
         # ... add a ROM for firmware ...
         self.soc.bootrom = SRAMPeripheral(size=0x4000, writable=False, init=firmware)
-        self.soc.add_peripheral(self.soc.bootrom, addr=0x00000000, as_submodule=False)
+        self.soc.add_peripheral(self.soc.bootrom, addr=0x00000000)
 
         # ... and a RAM for execution ...
         self.soc.scratchpad = SRAMPeripheral(size=0x4000)
-        self.soc.add_peripheral(self.soc.scratchpad, addr=0x00004000, as_submodule=False)
+        self.soc.add_peripheral(self.soc.scratchpad, addr=0x00004000)
 
         # ... add a timer, so our software can get precise timing ...
         self.soc.timer = TimerPeripheral(width=32)
-        self.soc.add_peripheral(self.soc.timer, as_submodule=False)
+        self.soc.add_peripheral(self.soc.timer)
 
         # ... add our UART peripheral ...
         self.uart_pins = Record([
@@ -224,14 +230,14 @@ class SelftestCore(Elaboratable):
             divisor   = int(clock_frequency // 115200),
             pins      = self.uart_pins,
         ))
-        self.soc.add_peripheral(self.soc.uart, as_submodule=False)
+        self.soc.add_peripheral(self.soc.uart)
 
         # ... and add our peripherals under test.
         peripherals = (
             LedPeripheral(name="leds"),
             ULPIRegisterPeripheral(name="target_ulpi",   io_resource_name="target_phy"),
-            ULPIRegisterPeripheral(name="host_ulpi",     io_resource_name="host_phy"),
-            ULPIRegisterPeripheral(name="sideband_ulpi", io_resource_name="sideband_phy"),
+            ULPIRegisterPeripheral(name="host_ulpi",     io_resource_name="control_phy"),
+            ULPIRegisterPeripheral(name="sideband_ulpi", io_resource_name="aux_phy"),
             PSRAMRegisterPeripheral(name="psram"),
         )
 
@@ -260,58 +266,6 @@ class SelftestCore(Elaboratable):
 
 
 # - main ----------------------------------------------------------------------
-
-from luna.gateware.platform import get_appropriate_platform
-
-from luna_soc.generate      import Generate, Introspect
-
-if __name__ == "__old_main__":
-    # disable UnusedElaborable warnings
-    from amaranth._unused import MustUse
-    MustUse._MustUse__silence = True
-
-    build_dir = os.path.join("build")
-
-    # configure logging
-    configure_default_logging()
-    logging.getLogger().setLevel(logging.DEBUG)
-
-    # select platform
-    platform = get_appropriate_platform()
-    if platform is None:
-        logging.error("Failed to identify a supported platform")
-        sys.exit(1)
-
-    # create design
-    design = SelftestCore()
-
-    # build soc
-    logging.info("Building soc")
-    overrides = {
-        "debug_verilog": True,
-        "verbose": False,
-    }
-    MustUse._MustUse__silence = False
-    products = platform.build(design, do_program=False, build_dir=build_dir, **overrides)
-    MustUse._MustUse__silence = True
-
-    # log resources and prepare to generate artifacts
-    Introspect(design.soc).log_resources()
-    generate = Generate(design.soc)
-
-    # generate: c-header and ld-script
-    path = os.path.join(build_dir, "genc")
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    logging.info("Generating c-header and ld-script: {}".format(path))
-    with open(os.path.join(path, "resources.h"), "w") as f:
-        generate.c_header(platform_name=platform.name, file=f)
-    with open(os.path.join(path, "soc.ld"), "w") as f:
-        generate.ld_script(file=f)
-
-    print("Build completed. Use 'make load' to load bitstream to device.")
-
 
 if __name__ == "__main__":
     from luna_soc import top_level_cli

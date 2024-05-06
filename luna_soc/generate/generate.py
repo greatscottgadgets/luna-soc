@@ -10,12 +10,12 @@ from .genc   import GenC
 from .gensvd import GenSVD
 from .genrust import GenRust
 
-from lambdasoc.soc.cpu import CPUSoC, BIOSBuilder
+from ..gateware.lunasoc import LunaSoC
 
 
 class Generate:
     # TODO add params: vendor, design_name, description, build_dir
-    def __init__(self, soc: CPUSoC):
+    def __init__(self, soc: LunaSoC):
         self._soc = soc
 
 

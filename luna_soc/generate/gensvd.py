@@ -6,24 +6,23 @@
 
 """Generate a SVD file for SoC designs."""
 
-import amaranth
-
-import amaranth_soc
-from  amaranth_soc.memory import MemoryMap, ResourceInfo
-
-from lambdasoc.soc.cpu import CPUSoC
+from os import path
+import logging
+import sys
 
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
-from os import path
-import logging
-import sys
+from  amaranth_soc.memory import MemoryMap, ResourceInfo
+import amaranth_soc
+
+from ..gateware.lunasoc import LunaSoC
+
 
 class GenSVD:
 
-    def __init__(self, soc: CPUSoC):
+    def __init__(self, soc: LunaSoC):
         self._soc = soc
 
 
@@ -37,9 +36,12 @@ class GenSVD:
         # <peripherals />
         peripherals = SubElement(device, "peripherals")
 
+        # TODO this should be determined by introspection
+        memories = ["bootrom", "scratchpad", "mainram", "ram", "rom", "spiflash"]
+
         window: MemoryMap
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name in ["bootrom", "scratchpad", "mainram", "ram", "rom"]:
+            if window.name in memories:
                 logging.debug("Skipping non-peripheral resource: {}".format(window.name))
                 continue
 
@@ -59,7 +61,7 @@ class GenSVD:
 
         window: MemoryMap
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name not in ["bootrom", "scratchpad", "mainram", "ram", "rom"]:
+            if window.name not in memories:
                 continue
 
             memoryRegion = SubElement(memoryRegions, "memoryRegion")
@@ -86,7 +88,7 @@ class GenSVD:
 
 # - section helpers -----------------------------------------------------------
 
-def _generate_section_device(soc: CPUSoC, vendor, name, description):
+def _generate_section_device(soc: LunaSoC, vendor, name, description):
     device = Element("device")
     device.set("schemaVersion", "1.1")
     device.set("xmlns:xs", "http://www.w3.org/2001/XMLSchema-instance")

@@ -8,9 +8,6 @@ from amaranth import *
 from amaranth_soc import wishbone
 from amaranth_soc.periph import ConstantMap
 
-from lambdasoc.cpu import CPU
-from lambdasoc.soc.cpu import ConstantAddr
-
 import os
 import logging
 
@@ -27,7 +24,7 @@ JTAG_VARIANTS = [ "cynthion+jtag" ]
 
 # - VexRiscv ------------------------------------------------------------------
 
-class VexRiscv(CPU, Elaboratable):
+class VexRiscv(Elaboratable):
     name       = "vexriscv"
     arch       = "riscv"
     byteorder  = "little"
@@ -84,7 +81,7 @@ class VexRiscv(CPU, Elaboratable):
     def constant_map(self):
         return ConstantMap(
             VEXRISCV          = True,
-            RESET_ADDR        = self._reset_addr, # ConstantAddr(self._reset_addr),
+            RESET_ADDR        = self._reset_addr,
             ARCH_RISCV        = True,
             RISCV_MULDIV_SOFT = self.muldiv == "soft",
             BYTEORDER_LITTLE  = True,

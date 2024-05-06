@@ -188,14 +188,8 @@ def _build_pre(args, fragment, platform, build_dir):
     """ Perform any pre-elaboration steps for the design. e.g. build a
         BIOS or equivalent firmware."""
 
-    if fragment.soc.has_bios:
-        # TODO fix lambdasoc/litex build
-        thirdparty = os.path.join(build_dir, "lambdasoc.soc.cpu/bios/3rdparty/litex")
-        if not os.path.exists(thirdparty):
-            logging.info("Fixing lambdasoc/litex build, creating output directory: {}".format(thirdparty))
-            os.makedirs(thirdparty)
-
-        # Build bios.
+    # Build bios if we have one
+    if hasattr(fragment.soc, "has_bios") and fragment.soc.has_bios:
         logging.info("Building bios")
         fragment.soc.build(name="soc", build_dir=build_dir, do_init=True)
 

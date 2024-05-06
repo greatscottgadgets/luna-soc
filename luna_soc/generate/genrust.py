@@ -8,13 +8,13 @@
 
 from .introspect import Introspect
 
-from lambdasoc.soc.cpu import CPUSoC
+from ..gateware.lunasoc import LunaSoC
 
 import datetime
 import logging
 
 class GenRust:
-    def __init__(self, soc: CPUSoC):
+    def __init__(self, soc: LunaSoC):
         self._soc = soc
 
     # - memory.x generation ---------------------------------------------------
@@ -34,11 +34,14 @@ class GenRust:
         emit(" */")
         emit("")
 
+        # TODO this should be determined by introspection
+        memories = ["bootrom", "scratchpad", "mainram", "ram", "rom", "spiflash"]
+
         # memory regions
         regions = set()
         emit("MEMORY {")
         for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name not in ["bootrom", "scratchpad", "mainram"]:
+            if window.name not in memories:
                 logging.debug("Skipping non-memory resource: {}".format(window.name))
                 continue
             emit(f"    {window.name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{stop-start:08x}")
@@ -46,11 +49,14 @@ class GenRust:
         emit("}")
         emit("")
 
+        # TODO support an offset for spiflash
+
         # region aliases
-        ram = "mainram" if "mainram" in regions else "scratchpad"
+        ram = "mainram"  if "mainram"  in regions else "scratchpad"
+        rom = "spiflash" if "spiflash" in regions else ram
         aliases = {
-            "REGION_TEXT":   ram,
-            "REGION_RODATA": ram,
+            "REGION_TEXT":   rom,
+            "REGION_RODATA": rom,
             "REGION_DATA":   ram,
             "REGION_BSS":    ram,
             "REGION_HEAP":   ram,

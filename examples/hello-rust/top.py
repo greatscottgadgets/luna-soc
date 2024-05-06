@@ -4,19 +4,19 @@
 # Copyright (c) 2020 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from luna                                        import configure_default_logging, top_level_cli
-from luna.gateware.usb.usb2.device               import USBDevice
-
-from luna_soc.gateware.cpu.vexriscv              import VexRiscv
-from luna_soc.gateware.soc                       import LunaSoC
-from luna_soc.gateware.csr                       import GpioPeripheral, LedPeripheral
+import logging
+import os
+import sys
 
 from amaranth                                    import Elaboratable, Module, Cat
 from amaranth.hdl.rec                            import Record
 
-import logging
-import os
-import sys
+from luna_soc.gateware.cpu.vexriscv              import VexRiscv
+from luna_soc.gateware.lunasoc                   import LunaSoC
+from luna_soc.gateware.csr                       import GpioPeripheral, LedPeripheral
+
+from luna_soc.util.readbin                       import get_mem_data
+
 
 CLOCK_FREQUENCIES_MHZ = {
     'sync': 60
@@ -35,13 +35,19 @@ class HelloSoc(Elaboratable):
 
         # create our SoC
         self.soc = LunaSoC(
-            cpu=VexRiscv(reset_addr=0x00000000, variant="cynthion"),
+            cpu=VexRiscv(reset_addr=0x40000000, variant="cynthion"),
             clock_frequency=clock_frequency,
-            internal_sram_size=32768,
         )
 
-        # ... add bios and core peripherals ...
-        self.soc.add_bios_and_peripherals(uart_pins=self.uart_pins)
+        # ... read our firmware binary ...
+        firmware = get_mem_data("firmware.bin", data_width=32, endianness="little")
+
+        # ... add core peripherals: memory, timer, uart ...
+        self.soc.add_core_peripherals(
+            uart_pins=self.uart_pins,
+            internal_sram_size=32768,
+            internal_sram_init=firmware,
+        )
 
         # ... add our LED peripheral, for simple output ...
         self.leds = LedPeripheral()
@@ -82,77 +88,14 @@ class HelloSoc(Elaboratable):
 
 # - main ----------------------------------------------------------------------
 
-from luna.gateware.platform import get_appropriate_platform
-
-from luna_soc.generate      import Generate, Introspect
-
 if __name__ == "__main__":
-    # disable UnusedElaborable warnings
-    from amaranth._unused import MustUse
-    MustUse._MustUse__silence = True
-
-    build_dir = os.path.join("build")
+    from luna     import configure_default_logging
+    from luna_soc import top_level_cli
 
     # configure logging
     configure_default_logging()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    # select platform
-    platform = get_appropriate_platform()
-    if platform is None:
-        logging.error("Failed to identify a supported platform")
-        sys.exit(1)
-
-    # configure clock frequency
-    clock_frequency = int(platform.default_clk_frequency)
-    logging.info(f"Platform clock frequency: {clock_frequency}")
-
     # create design
-    design = HelloSoc(clock_frequency=clock_frequency)
-
-    # TODO fix litex build
-    thirdparty = os.path.join(build_dir, "lambdasoc.soc.cpu/bios/3rdparty/litex")
-    if not os.path.exists(thirdparty):
-        logging.info("Fixing build, creating output directory: {}".format(thirdparty))
-        os.makedirs(thirdparty)
-
-    # build litex bios
-    logging.info("Building bios")
-    design.soc.build(name="soc",
-                     build_dir=build_dir,
-                     do_init=True)
-
-    # build soc
-    logging.info("Building soc")
-    overrides = {
-        "debug_verilog": True,
-        "verbose": False,
-    }
-    products = platform.build(design, do_program=False, build_dir=build_dir, **overrides)
-
-    # log resources and prepare to generate artifacts
-    Introspect(design.soc).log_resources()
-    generate = Generate(design.soc)
-
-    # generate: svd file
-    path = os.path.join(build_dir, "gensvd")
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    logging.info("Generating svd file: {}".format(path))
-    with open(os.path.join(path, "lunasoc.svd"), "w") as f:
-        generate.svd(file=f)
-
-    # generate: rust memory.x file
-    path = os.path.join(build_dir, "genrust")
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    logging.info("Generating memory.x file: {}".format(path))
-    with open(os.path.join(path, "memory.x"), "w") as f:
-        generate.memory_x(file=f)
-
-    print("Build completed. Use 'make load' to load bitstream to device.")
-
-    # TODO
-    #top_level_cli(design)
+    design = HelloSoc(clock_frequency=int(60e6))
+    top_level_cli(design)

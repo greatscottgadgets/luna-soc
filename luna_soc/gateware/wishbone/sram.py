@@ -11,12 +11,12 @@ from amaranth_soc import wishbone
 from amaranth_soc.memory import MemoryMap
 from amaranth_soc.periph import ConstantMap
 
-from lambdasoc.periph import Peripheral
+from ..vendor.lambdasoc.periph import Peripheral
 
 
 __all__ = ["SRAMPeripheral"]
 
-
+# TODO this should live in wishbone/ !
 class SRAMPeripheral(Peripheral, Elaboratable):
     """SRAM storage peripheral.
 

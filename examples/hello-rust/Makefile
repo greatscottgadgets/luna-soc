@@ -1,33 +1,40 @@
 SHELL := /bin/zsh
 
-# - configuration -------------------------------------------------------------
+# - firmware -----------------------------------------------------------------
 
-CROSS	?= riscv64-unknown-elf
+firmware: firmware.bin
 
-AR := $(CROSS)-ar
+firmware.bin: memory.x
+	cargo objcopy --release -- -Obinary firmware.bin
+
+
+# - generated files -----------------------------------------------------------
+
+memory.x: $(SOC)
+	python top.py --generate-memory-x > $@
+
 
 # - gateware ------------------------------------------------------------------
 
-gateware:
-	rm -rf build
-	AR=$(AR) python top.py
-	cp build/genrust/memory.x .
+gateware: firmware.bin top.py
+	python ./top.py --dry-run --output top.bit
+	rm firmware.bin
 
-load:
-	-apollo configure build/top.bit
-
-load-ulx3s:
-	openFPGALoader --board ulx3s build/top.bit
-
-# - firmware -----------------------------------------------------------------
-
-firmware:
-	cargo build
 
 # - helpers -------------------------------------------------------------------
 
-run:
-	cargo run
-
 clean:
-	-rm -rf build/ resources.h soc.ld
+	-cargo clean
+	-rm -rf memory.x firmware.bin top.bit build/
+
+# Loads the SoC bitstream running the selftest firmware onto our FPGA.
+program: firmware gateware
+	-apollo configure top.bit
+
+program-ulx3s:
+	openFPGALoader --board ulx3s top.bit
+
+# Loads the SoC bitstream running the selftest firmware onto our FPGA and shows the output in a console.
+run: firmware gateware
+	-apollo configure top.bit
+	pyserial-miniterm $(UART) 115200

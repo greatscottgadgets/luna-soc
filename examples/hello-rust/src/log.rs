@@ -12,12 +12,12 @@ use core::fmt::Write;
 
 // - initialization -----------------------------------------------------------
 
-static LOGGER: WriteLogger<hal::Serial> = WriteLogger {
+static LOGGER: WriteLogger<hal::Serial0> = WriteLogger {
     writer: RefCell::new(None),
     level: Level::Trace,
 };
 
-pub fn init(writer: hal::Serial) {
+pub fn init(writer: hal::Serial0) {
     LOGGER.writer.replace(Some(writer));
     match log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace)) {
         Ok(()) => (),

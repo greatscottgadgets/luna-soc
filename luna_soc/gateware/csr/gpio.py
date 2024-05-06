@@ -6,7 +6,8 @@
 
 from amaranth         import Elaboratable, Module, Signal, Record
 from amaranth.hdl.rec import DIR_FANIN, DIR_FANOUT
-from lambdasoc.periph import Peripheral
+
+from .base import Peripheral
 
 __all__ = ["GpioPeripheral"]
 

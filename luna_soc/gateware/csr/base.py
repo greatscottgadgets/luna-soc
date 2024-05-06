@@ -21,12 +21,12 @@ from amaranth_soc              import csr, wishbone
 from amaranth_soc.memory       import MemoryMap
 from amaranth_soc.csr.wishbone import WishboneCSRBridge
 
-from lambdasoc.periph.base     import PeripheralBridge
-from lambdasoc.periph.event    import EventSource
+from ..vendor.lambdasoc.periph.base   import PeripheralBridge
+from ..vendor.lambdasoc.periph.base   import Peripheral as PeripheralBase
+from ..vendor.lambdasoc.periph.base   import CSRBank    as CSRBankBase
+from ..vendor.lambdasoc.periph.event  import EventSource
 
-import lambdasoc
-
-__all__ = ["Peripheral", "CSRBank", "PeripheralBridge"]
+__all__ = ["Peripheral", "CSRBank", "EventSource", "PeripheralBridge"]
 
 # Note:
 #
@@ -39,7 +39,7 @@ __all__ = ["Peripheral", "CSRBank", "PeripheralBridge"]
 # The intention is to either upstream this at a future point in time
 # or use LambdaSoC's facilities if/when it should gain them.
 
-class Peripheral(lambdasoc.periph.base.Peripheral):
+class Peripheral(PeripheralBase):
     def csr_bank(self, *, name=None, addr=None, alignment=None, desc=None):
         """Request a CSR bank.
 
@@ -90,7 +90,7 @@ class Peripheral(lambdasoc.periph.base.Peripheral):
         return event
 
 
-class CSRBank(lambdasoc.periph.base.CSRBank):
+class CSRBank(CSRBankBase):
     def csr(self, width, access, *, addr=None, alignment=None, name=None,
             src_loc_at=0, desc=None):
         """Request a CSR register.

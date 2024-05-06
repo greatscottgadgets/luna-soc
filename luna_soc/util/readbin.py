@@ -86,8 +86,6 @@ def get_boot_address(filename_or_regions, offset=0):
     # Create memory regions.
     regions = get_mem_regions(filename_or_regions, offset)
 
-    print(regions)
-
     # Boot on last region.
     filename, base = regions.popitem()
     return int(base, 0)
