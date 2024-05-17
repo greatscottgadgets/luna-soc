@@ -188,10 +188,11 @@ def _build_pre(args, fragment, platform, build_dir):
     """ Perform any pre-elaboration steps for the design. e.g. build a
         BIOS or equivalent firmware."""
 
-    # Build bios if we have one
-    if hasattr(fragment.soc, "has_bios") and fragment.soc.has_bios:
-        logging.info("Building bios")
-        fragment.soc.build(name="soc", build_dir=build_dir, do_init=True)
+    # Call SoC build function if it has one
+    soc_build = getattr(fragment.soc, "build", None)
+    if callable(soc_build):
+        logging.info("Performing SoC build steps")
+        soc_build(name="soc", build_dir=build_dir)
 
 
 def _build_gateware(args, fragment, platform, build_dir):
