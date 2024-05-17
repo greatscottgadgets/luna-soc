@@ -31,7 +31,7 @@ dependencies = [
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio@4a14bb17",
     "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc@d2185e3",
     "minerva @ git+https://github.com/minerva-cpu/minerva",
-    "luna @ git+https://github.com/greatscottgadgets/luna@main",
+    "luna-usb @ git+https://github.com/greatscottgadgets/luna@main",
 ]
 
 [tool.setuptools]
