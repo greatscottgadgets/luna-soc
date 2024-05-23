@@ -8,6 +8,8 @@
 
 import datetime
 
+import luna_soc.gateware.vendor.amaranth_soc
+
 from ..gateware.lunasoc import LunaSoC
 
 

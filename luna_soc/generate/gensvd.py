@@ -14,8 +14,9 @@ from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
-from  amaranth_soc.memory import MemoryMap, ResourceInfo
-import amaranth_soc
+import luna_soc.gateware.vendor.amaranth_soc
+
+from  ..gateware.vendor.amaranth_soc.memory import MemoryMap, ResourceInfo
 
 from ..gateware.lunasoc import LunaSoC
 

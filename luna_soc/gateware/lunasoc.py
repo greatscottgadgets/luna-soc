@@ -1,9 +1,10 @@
 from amaranth                import Elaboratable, Module
 
-from amaranth_soc            import wishbone
-from amaranth_soc.memory     import MemoryMap
-from amaranth_soc.periph     import ConstantMap
-from amaranth_stdio.serial   import AsyncSerial
+from .vendor.amaranth_soc            import wishbone
+from .vendor.amaranth_soc.memory     import MemoryMap
+from .vendor.amaranth_soc.periph     import ConstantMap
+
+from .vendor.amaranth_stdio.serial   import AsyncSerial
 
 from .vendor.lambdasoc.periph.intc   import GenericInterruptController
 from .vendor.lambdasoc.periph.serial import AsyncSerialPeripheral
@@ -33,7 +34,7 @@ class LunaSoC(Elaboratable):
     technology.
     """
 
-    def __init__(self, cpu=Minerva(), clock_frequency=int(60e6), with_debug=False):
+    def __init__(self, cpu, clock_frequency=int(60e6), with_debug=False):
 
         self.cpu             = cpu
         self.clock_frequency = clock_frequency

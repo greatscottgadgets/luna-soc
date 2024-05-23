@@ -1,7 +1,7 @@
 from amaranth import *
 from amaranth import tracer
 
-from amaranth_soc import csr
+from ...amaranth_soc import csr
 
 
 __all__ = ["EventSource", "IRQLine", "InterruptSource"]

@@ -11,20 +11,20 @@
 
 """ Peripheral helpers for LUNA devices. """
 
-from contextlib import contextmanager
+from contextlib                         import contextmanager
 
-from amaranth                  import Module, Elaboratable
-from amaranth                  import tracer
-from amaranth.utils            import log2_int
+from amaranth                           import Module, Elaboratable
+from amaranth                           import tracer
+from amaranth.utils                     import log2_int
 
-from amaranth_soc              import csr, wishbone
-from amaranth_soc.memory       import MemoryMap
-from amaranth_soc.csr.wishbone import WishboneCSRBridge
+from ..vendor.amaranth_soc              import csr, wishbone
+from ..vendor.amaranth_soc.memory       import MemoryMap
+from ..vendor.amaranth_soc.csr.wishbone import WishboneCSRBridge
 
-from ..vendor.lambdasoc.periph.base   import PeripheralBridge
-from ..vendor.lambdasoc.periph.base   import Peripheral as PeripheralBase
-from ..vendor.lambdasoc.periph.base   import CSRBank    as CSRBankBase
-from ..vendor.lambdasoc.periph.event  import EventSource
+from ..vendor.lambdasoc.periph.base     import PeripheralBridge
+from ..vendor.lambdasoc.periph.base     import Peripheral as PeripheralBase
+from ..vendor.lambdasoc.periph.base     import CSRBank    as CSRBankBase
+from ..vendor.lambdasoc.periph.event    import EventSource
 
 __all__ = ["Peripheral", "CSRBank", "EventSource", "PeripheralBridge"]
 

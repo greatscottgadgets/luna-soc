@@ -1,8 +1,9 @@
 from amaranth import *
-from amaranth_soc import wishbone
-from amaranth_soc.periph import ConstantMap
 
 from minerva.core import Minerva as MinervaCore
+
+from ..vendor.amaranth_soc import wishbone
+from ..vendor.amaranth_soc.periph import ConstantMap
 
 
 __all__ = ["Minerva"]

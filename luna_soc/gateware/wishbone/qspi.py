@@ -9,12 +9,13 @@
 from amaranth                           import Signal, Elaboratable, Module, Cat, C, Instance, DomainRenamer
 from amaranth.utils                     import bits_for, log2_int
 
-from amaranth_soc                       import wishbone
-from amaranth_soc.memory                import MemoryMap
-
 from luna.gateware.stream               import StreamInterface
 
+from ..vendor.amaranth_soc              import wishbone
+from ..vendor.amaranth_soc.memory       import MemoryMap
+
 from ..vendor.lambdasoc.periph          import Peripheral
+
 
 __all__ = ["ECP5ConfigurationFlashInterface", "WishboneSPIFlashReader"]
 
