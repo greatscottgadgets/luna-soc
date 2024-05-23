@@ -10,6 +10,10 @@ Some things you can use LUNA-SOC for, currently:
 * Add a variety of Wishbone and CSR peripherals to your SoC design such as: SRAM, GPIO, UART and USB.
 * Implement firmware for your designs using Rust or C.
 
+> __NOTE__
+> There are no official packages for Minerva at the time of writing but you can install it directly from the repository using:
+>
+> `pip install git+https://github.com/minerva-cpu/minerva`
 
 ## Project Structure
 
