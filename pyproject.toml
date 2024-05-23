@@ -1,18 +1,16 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=64", "setuptools-git-versioning<2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-dynamic = ["version"]
-
 name = "luna-soc"
+description = "Amaranth HDL libary for building SoCs with LUNA USB peripherals."
+license = { text = "BSD" }
+readme = "README.md"
+requires-python = ">=3.8"
 authors = [
     {name = "Great Scott Gadgets", email = "dev@greatscottgadgets.com"},
 ]
-description = "Amaranth HDL libary for building SoCs with LUNA USB peripherals."
-readme = "README.md"
-license = { text = "BSD" }
-urls = { Source = "https://greatscottgadgets.com/cynthion" }
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -24,15 +22,23 @@ classifiers = [
     "Environment :: Other Environment",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
     "Topic :: System :: Hardware :: Universal Serial Bus (USB)",
 ]
 
+dynamic = ["version"]
+
 dependencies = [
+    "luna-usb @ git+https://github.com/greatscottgadgets/luna@main",
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio@4a14bb17",
     "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc@d2185e3",
     "minerva @ git+https://github.com/minerva-cpu/minerva",
-    "luna-usb @ git+https://github.com/greatscottgadgets/luna@main",
 ]
+
+[project.urls]
+Documentation = "https://luna-soc.readthedocs.io"
+Repository    = "https://github.com/greatscottgadgets/luna-soc"
+Issues        = "https://github.com/greatscottgadgets/luna-soc/issues"
 
 [tool.setuptools]
 include-package-data = true
@@ -45,4 +51,4 @@ luna_soc = "luna_soc"
 
 [tool.setuptools-git-versioning]
 enabled = true
-starting_version = "2023.06.26"
+starting_version = "0.0.0"
