@@ -1,9 +1,9 @@
 from amaranth import *
 from amaranth.lib.fifo import SyncFIFOBuffered
 
-from amaranth_soc.periph import ConstantMap
+from ...amaranth_soc.periph import ConstantMap
 
-from amaranth_stdio.serial import AsyncSerial
+from ...amaranth_stdio.serial import AsyncSerial
 
 from . import Peripheral
 

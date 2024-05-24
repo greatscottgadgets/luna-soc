@@ -1,6 +1,6 @@
 from amaranth import *
 
-from amaranth_soc.periph import ConstantMap
+from ...amaranth_soc.periph import ConstantMap
 
 from . import Peripheral
 

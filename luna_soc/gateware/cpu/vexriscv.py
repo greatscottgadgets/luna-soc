@@ -5,8 +5,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from amaranth import *
-from amaranth_soc import wishbone
-from amaranth_soc.periph import ConstantMap
+
+from ..vendor.amaranth_soc import wishbone
+from ..vendor.amaranth_soc.periph import ConstantMap
 
 import os
 import logging

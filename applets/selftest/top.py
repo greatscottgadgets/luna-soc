@@ -12,8 +12,6 @@ import sys
 from amaranth                       import Cat, ClockSignal, Elaboratable, Module, ResetSignal
 from amaranth.hdl.rec               import Record
 
-from amaranth_stdio.serial          import AsyncSerial
-
 from luna                           import configure_default_logging
 from luna.gateware.interface.psram  import HyperRAMPHY, HyperRAMInterface
 from luna.gateware.interface.ulpi   import ULPIRegisterWindow
@@ -22,14 +20,15 @@ from luna.gateware.usb.usb2.device  import USBDevice
 from luna_soc.gateware.cpu.minerva  import Minerva
 from luna_soc.gateware.csr          import GpioPeripheral, LedPeripheral, UARTPeripheral
 from luna_soc.gateware.lunasoc      import LunaSoC
-#from luna_soc.gateware.wishbone     import SRAMPeripheral
 
-from luna_soc.util.readbin          import get_mem_data
+from luna_soc.gateware.vendor.amaranth_stdio.serial   import AsyncSerial
 
 from luna_soc.gateware.vendor.lambdasoc.periph        import Peripheral
 from luna_soc.gateware.vendor.lambdasoc.periph.serial import AsyncSerialPeripheral
 from luna_soc.gateware.vendor.lambdasoc.periph.sram   import SRAMPeripheral
 from luna_soc.gateware.vendor.lambdasoc.periph.timer  import TimerPeripheral
+
+from luna_soc.util.readbin          import get_mem_data
 
 
 # Run our tests at a slower clock rate, for now.

@@ -6,12 +6,12 @@
 
 """Introspection tools for SoC designs."""
 
-import amaranth_soc
 import logging
 
-from ..gateware.lunasoc import LunaSoC
-
+from ..gateware.vendor                   import amaranth_soc
 from ..gateware.vendor.lambdasoc.periph  import Peripheral
+from ..gateware.lunasoc                  import LunaSoC
+
 
 
 class Introspect:
