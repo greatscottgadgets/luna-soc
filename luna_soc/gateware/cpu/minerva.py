@@ -1,6 +1,9 @@
 from amaranth import *
 
-from minerva.core import Minerva as MinervaCore
+try:
+    from minerva.core import Minerva as MinervaCore
+except:
+    raise ImportError("To use Minerva with luna-soc you need to install it: pip install git+https://github.com/minerva-cpu/minerva")
 
 from ..vendor.amaranth_soc import wishbone
 from ..vendor.amaranth_soc.periph import ConstantMap
@@ -22,7 +25,7 @@ class Minerva(Elaboratable):
                                        features={"err", "cti", "bte"})
         self.dbus = wishbone.Interface(addr_width=30, data_width=32, granularity=8,
                                        features={"err", "cti", "bte"})
-        self.ip   = Signal.like(self._cpu.external_interrupt)
+        self.irq_external = Signal.like(self._cpu.external_interrupt)
 
     @property
     def reset_addr(self):
@@ -39,7 +42,7 @@ class Minerva(Elaboratable):
         m.d.comb += [
             self._cpu.ibus.connect(self.ibus),
             self._cpu.dbus.connect(self.dbus),
-            self._cpu.external_interrupt.eq(self.ip),
+            self._cpu.external_interrupt.eq(self.irq_external),
         ]
 
         return m

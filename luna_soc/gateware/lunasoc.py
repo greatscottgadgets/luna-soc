@@ -10,8 +10,6 @@ from .vendor.lambdasoc.periph.intc   import GenericInterruptController
 from .vendor.lambdasoc.periph.serial import AsyncSerialPeripheral
 from .vendor.lambdasoc.periph.timer  import TimerPeripheral
 
-from .cpu.minerva      import Minerva
-from .cpu.vexriscv     import VexRiscv
 from .csr.base         import Peripheral
 from .wishbone         import SRAMPeripheral, WishboneRAM, WishboneROM
 
@@ -49,11 +47,9 @@ class LunaSoC(Elaboratable):
         self._bus_arbiter.add(cpu.dbus)
 
         # create interrupt controller
-        if isinstance(cpu, Minerva):
-            self.cpu_irq_external = cpu.ip
-        elif isinstance(cpu, VexRiscv):
+        try:
             self.cpu_irq_external = cpu.irq_external
-        else:
+        except:
             raise ValueError(f"Unsupported CPU: {cpu}")
         self.intc = GenericInterruptController(width=len(self.cpu_irq_external))
 
