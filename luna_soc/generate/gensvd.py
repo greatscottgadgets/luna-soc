@@ -16,6 +16,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
 import luna_soc.gateware.vendor.amaranth_soc
 
+from  ..gateware.vendor import amaranth_soc
 from  ..gateware.vendor.amaranth_soc.memory import MemoryMap, ResourceInfo
 
 from ..gateware.lunasoc import LunaSoC
@@ -150,7 +151,7 @@ def _generate_section_peripheral(peripherals: Element, soc, window: MemoryMap, s
 def _generate_section_register(registers: Element, window: MemoryMap, resource_info: ResourceInfo):
     resource: amaranth_soc.csr.bus.Element = resource_info.resource
     assert type(resource) == amaranth_soc.csr.bus.Element
-    from amaranth_soc.csr.bus import Element
+    from ..gateware.vendor.amaranth_soc.csr.bus import Element
 
     register = SubElement(registers, "register")
     el = SubElement(register, "name")
