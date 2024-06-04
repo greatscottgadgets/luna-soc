@@ -13,3 +13,6 @@ luna-soc Documentation
   :caption: API Documentation
 
   api_docs/modules
+
+* :ref:`genindex`
+* :ref:`modindex`

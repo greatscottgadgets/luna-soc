@@ -1,11 +1,5 @@
 ## luna-soc Documentation
 
-### Rebuilding API documentation
-
-After code changes, API documentation can be rebuilt with:
-
-    make apidocs
-
 ### Rebuilding register diagrams
 
 After peripheral changes the register diagrams can be rebuilt with:

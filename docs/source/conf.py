@@ -1,5 +1,6 @@
-import os, sys, time
+import os, pkg_resources, sys, time
 sys.path.insert(0, os.path.abspath("../../"))
+sys.path.insert(0, os.path.abspath("../../luna_soc"))
 
 import sphinx_rtd_theme
 
@@ -13,14 +14,14 @@ project = 'luna-soc'
 copyright = time.strftime('2018-%Y, Great Scott Gadgets')
 author = 'Great Scott Gadget'
 
-version = ''
+version = pkg_resources.get_distribution('luna_soc').version
 release = ''
 
 
 # -- General configuration ---------------------------------------------------
 
 templates_path = ['_templates']
-exclude_patterns = ['_build']
+exclude_patterns = ['build']
 source_suffix = '.rst'
 master_doc = 'index'
 language = "en"
@@ -28,11 +29,22 @@ exclude_patterns = []
 pygments_style = None
 
 extensions = [
+    'recommonmark',
     'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
+    'sphinx.ext.doctest',
     'sphinx.ext.extlinks',
     'sphinx.ext.napoleon',
+    'sphinx.ext.todo',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.apidoc',
 ]
+
+# configure extension: sphinxcontrib.apidoc
+apidoc_module_dir = '../../luna_soc'
+apidoc_output_dir = 'api_docs'
+apidoc_excluded_paths = ['gateware/vendor/']
+apidoc_separate_modules = True
 
 # configure extension: extlinks
 extlinks = {

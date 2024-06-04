@@ -10,7 +10,7 @@
     - [7:0]
     - read-only
     - ``data``
-    - A FIFO that returns the bytes from the most recently captured SETUP packet.            Reading a byte from this register advances the FIFO. The first eight bytes read            from this conain the core SETUP packet.
+    - A FIFO that returns the bytes from the most recently captured SETUP packet.            Reading a byte from this register advances the FIFO. The first eight bytes read            from this contain the core SETUP packet.
   * - 0x0004
     - [0:0]
     - write-only
@@ -20,7 +20,7 @@
     - [3:0]
     - read-only
     - ``epno``
-    - The number of the endpoint associated with the current SETUP packet.
+    - The endpoint number associated with the most recently captured SETUP packet.
   * - 0x000c
     - [0:0]
     - read-only

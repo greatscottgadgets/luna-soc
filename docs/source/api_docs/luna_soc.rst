@@ -14,13 +14,10 @@ Subpackages
 Submodules
 ----------
 
-luna\_soc.top\_level\_cli module
---------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: luna_soc.top_level_cli
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   luna_soc.top_level_cli
 
 Module contents
 ---------------

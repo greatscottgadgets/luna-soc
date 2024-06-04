@@ -4,13 +4,10 @@ luna\_soc.gateware.csr.usb2.interfaces package
 Submodules
 ----------
 
-luna\_soc.gateware.csr.usb2.interfaces.eptri module
----------------------------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: luna_soc.gateware.csr.usb2.interfaces.eptri
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   luna_soc.gateware.csr.usb2.interfaces.eptri
 
 Module contents
 ---------------

@@ -7,18 +7,17 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   luna_soc.gateware.cpu
    luna_soc.gateware.csr
+   luna_soc.gateware.wishbone
 
 Submodules
 ----------
 
-luna\_soc.gateware.soc module
------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: luna_soc.gateware.soc
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   luna_soc.gateware.lunasoc
 
 Module contents
 ---------------
