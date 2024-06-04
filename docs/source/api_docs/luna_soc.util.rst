@@ -4,13 +4,10 @@ luna\_soc.util package
 Submodules
 ----------
 
-luna\_soc.util.readbin module
------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: luna_soc.util.readbin
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   luna_soc.util.readbin
 
 Module contents
 ---------------

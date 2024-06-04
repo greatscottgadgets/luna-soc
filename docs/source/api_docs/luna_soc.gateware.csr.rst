@@ -12,45 +12,13 @@ Subpackages
 Submodules
 ----------
 
-luna\_soc.gateware.csr.base module
-----------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: luna_soc.gateware.csr.base
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-luna\_soc.gateware.csr.gpio module
-----------------------------------
-
-.. automodule:: luna_soc.gateware.csr.gpio
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-luna\_soc.gateware.csr.led module
----------------------------------
-
-.. automodule:: luna_soc.gateware.csr.led
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-luna\_soc.gateware.csr.sram module
-----------------------------------
-
-.. automodule:: luna_soc.gateware.csr.sram
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-luna\_soc.gateware.csr.uart module
-----------------------------------
-
-.. automodule:: luna_soc.gateware.csr.uart
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   luna_soc.gateware.csr.base
+   luna_soc.gateware.csr.gpio
+   luna_soc.gateware.csr.led
+   luna_soc.gateware.csr.uart
 
 Module contents
 ---------------

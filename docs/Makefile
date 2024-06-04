@@ -18,19 +18,14 @@ help:
 #
 #  install d2: https://github.com/terrastruct/d2
 #
-#  make apidocs d2 registers html
-
-# Generate api docs
-apidocs:
-	rm -rf source/api_docs/
-	sphinx-apidoc -o source/api_docs/ ../luna_soc
+#  make d2 registers html
 
 # Compile all d2 diagrams
 d2:
 	@for f in $(shell ls ./images/eptri/*.d2); do d2 $${f}; done
 
 # Compile all register maps
-SVD = ~/GreatScott/cynthion.git/firmware/lunasoc-pac/svd/lunasoc.svd
+SVD = source/lunasoc.svd
 registers:
 	python bin/svd2rst.py USB0			  $(SVD) images/eptri/registers-USB0.rst
 	python bin/svd2rst.py USB0_EP_CONTROL $(SVD) images/eptri/registers-USB0_EP_CONTROL.rst

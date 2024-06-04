@@ -12,13 +12,10 @@ Subpackages
 Submodules
 ----------
 
-luna\_soc.gateware.csr.usb2.device module
------------------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: luna_soc.gateware.csr.usb2.device
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   luna_soc.gateware.csr.usb2.device
 
 Module contents
 ---------------
