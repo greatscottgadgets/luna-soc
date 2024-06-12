@@ -29,7 +29,7 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-    "luna-usb @ git+https://github.com/greatscottgadgets/luna@main",
+    "luna-usb~=0.1",
 ]
 
 [project.urls]
@@ -48,4 +48,4 @@ luna_soc = "luna_soc"
 
 [tool.setuptools-git-versioning]
 enabled = true
-starting_version = "0.0.0"
+starting_version = "0.1.0"
