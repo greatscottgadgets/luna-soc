@@ -6,7 +6,7 @@
 
 # Based on code from LiteSPI
 
-from amaranth               import Module, Cat
+from amaranth               import Module, Signal, Cat, EnableInserter
 from amaranth.lib.fifo      import AsyncFIFO
 from amaranth.lib.cdc       import FFSynchronizer
 from amaranth.lib           import wiring
@@ -113,7 +113,8 @@ class SPIControlPortCrossbar(wiring.Component):
     def elaborate(self, platform):
         m = Module()
 
-        m.submodules.rr = rr = RoundRobin(count=self._num_ports)
+        grant_update = Signal()
+        m.submodules.rr = rr = EnableInserter(grant_update)(RoundRobin(count=self._num_ports))
         m.d.comb += rr.requests.eq(Cat(self.get_port(i).cs for i in range(self._num_ports)))
 
         # Multiplexer.
@@ -121,6 +122,7 @@ class SPIControlPortCrossbar(wiring.Component):
             for i in range(self._num_ports):
                 with m.Case(i):
                     connect(m, wiring.flipped(self.get_port(i)), wiring.flipped(self.master))
+                    m.d.comb += grant_update.eq(~rr.valid | ~rr.requests[i])
 
         return m
 
