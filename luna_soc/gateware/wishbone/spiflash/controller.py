@@ -16,10 +16,10 @@ from ...vendor.lambdasoc.periph         import Peripheral
 from .port                              import SPIControlPort
 
 
-class SPIFlashMaster(Peripheral, wiring.Component):
-    """Wishbone generic SPI Flash master.
+class SPIController(Peripheral, wiring.Component):
+    """Wishbone generic SPI Flash Controller interface.
 
-    Provides a generic SPI master that can be controlled using CSRs.
+    Provides a generic SPI Controller that can be interfaced using CSRs.
     Supports multiple access modes with the help of ``width`` and ``mask`` registers which
     can be used to configure the PHY into any supported SDR mode (single/dual/quad/octal).
     """

@@ -4,6 +4,6 @@
 # Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from .memory import *
-from .qspi   import *
-from .sram   import *
+from .memory    import *
+from .spiflash  import *
+from .sram      import *
