@@ -20,13 +20,13 @@ __all__ = ["ECP5ConfigurationFlashInterface", "SPIPHYController", "SPIFlashPerip
 class SPIFlashPeripheral(Elaboratable):
     """SPI Flash peripheral main module.
 
-    This class provides a wrapper that can instantiate both ``SPIFlashMaster`` and 
+    This class provides a wrapper that can instantiate both ``SPIFlashMaster`` and
     ``SPIFlashMemoryMap`` and connect them to the PHY.
 
     Both options share access to the PHY using a crossbar.
     Also, performs CDC if a different clock is used in the PHY.
     """
-    def __init__(self, phy, *, data_width=32, granularity=8, with_master=True, with_mmap=True, 
+    def __init__(self, phy, *, data_width=32, granularity=8, with_master=True, master_name=None, with_mmap=True,
         mmap_size=None, mmap_name=None, mmap_byteorder="little", domain="sync"):
 
         self._domain    = domain
@@ -38,11 +38,12 @@ class SPIFlashPeripheral(Elaboratable):
             self.spi_master = SPIFlashMaster(
                 data_width=data_width,
                 granularity=granularity,
+                name=master_name,
                 domain=domain,
             )
             self.master = self.spi_master.bus
             self.cores.append(self.spi_master)
-            
+
         if with_mmap:
             self.spi_mmap = SPIFlashMemoryMap(
                 size=mmap_size,
@@ -63,7 +64,7 @@ class SPIFlashPeripheral(Elaboratable):
 
         # Add crossbar when we need to share multiple cores with the same PHY.
         if len(self.cores) > 1:
-            
+
             m.submodules.crossbar = crossbar = SPIControlPortCrossbar(
                 data_width=self.data_width,
                 num_ports=len(self.cores),
@@ -76,8 +77,8 @@ class SPIFlashPeripheral(Elaboratable):
             phy_controller = crossbar.master
         else:
             phy_controller = self.cores[0]
-        
-        # Add a clock domain crossing submodule if the PHY clock is different. 
+
+        # Add a clock domain crossing submodule if the PHY clock is different.
         if self._domain != phy._domain:
             m.submodules.cdc = cdc = SPIControlPortCDC(
                 data_width=self.data_width,

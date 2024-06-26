@@ -25,7 +25,7 @@ class SPIFlashMaster(Peripheral, wiring.Component):
     """
     def __init__(self, *, data_width=32, granularity=8, rx_depth=16, tx_depth=16, name=None, domain="sync"):
         wiring.Component.__init__(self, SPIControlPort(data_width))
-        Peripheral.__init__(self)
+        Peripheral.__init__(self, name=name)
 
         self._domain   = domain
 
