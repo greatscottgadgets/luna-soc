@@ -6,7 +6,7 @@
 
 # Based on code from LiteSPI
 
-from amaranth                           import Module, DomainRenamer
+from amaranth                           import Module, DomainRenamer, Signal
 from amaranth.lib                       import wiring
 from amaranth.lib.fifo                  import SyncFIFO
 from amaranth.lib.data                  import StructLayout, View
@@ -16,16 +16,16 @@ from ...vendor.lambdasoc.periph         import Peripheral
 from .port                              import SPIControlPort
 
 
-class SPIFlashMaster(Peripheral, wiring.Component):
-    """Wishbone generic SPI Flash master.
+class SPIController(Peripheral, wiring.Component):
+    """Wishbone generic SPI Flash Controller interface.
 
-    Provides a generic SPI master that can be controlled using CSRs.
-    Supports multiple access modes with the help of ``width`` and ``mask`` registers which 
+    Provides a generic SPI Controller that can be interfaced using CSRs.
+    Supports multiple access modes with the help of ``width`` and ``mask`` registers which
     can be used to configure the PHY into any supported SDR mode (single/dual/quad/octal).
     """
     def __init__(self, *, data_width=32, granularity=8, rx_depth=16, tx_depth=16, name=None, domain="sync"):
         wiring.Component.__init__(self, SPIControlPort(data_width))
-        Peripheral.__init__(self)
+        Peripheral.__init__(self, name=name)
 
         self._domain   = domain
 
@@ -74,6 +74,20 @@ class SPIFlashMaster(Peripheral, wiring.Component):
             with m.If(reg.w_stb):
                 m.d.sync += reg.r_data.eq(reg.w_data)
 
+        # Chip select generation.
+        cs = Signal()
+        with m.FSM():
+            with m.State("RISE"):
+                # Enable chip select when the CSR is set to 1 and the TX FIFO contains something.
+                m.d.comb += cs.eq(tx_fifo.r_rdy)
+                with m.If(cs == 1):
+                    m.next = "FALL"
+            with m.State("FALL"):
+                # Only disable chip select after the current TX FIFO is emptied.
+                m.d.comb += cs.eq(self._cs.r_data | tx_fifo.r_rdy)
+                with m.If(cs == 0):
+                    m.next = "RISE"
+
         # Connect FIFOs to PHY streams.
         tx_fifo_payload = View(self.tx_fifo_layout, tx_fifo.w_data)
         m.d.comb += [
@@ -83,9 +97,9 @@ class SPIFlashMaster(Peripheral, wiring.Component):
             tx_fifo_payload.width   .eq(self._phy_width.r_data),
             tx_fifo_payload.mask    .eq(self._phy_mask.r_data),
             tx_fifo.w_en            .eq(self._rxtx.w_stb),
-            
+
             # SPI chip select.
-            self.cs                 .eq(self._cs.r_data),
+            self.cs                 .eq(cs),
 
             # TX FIFO to SPI PHY (PICO).
             self.source.payload     .eq(tx_fifo.r_data),

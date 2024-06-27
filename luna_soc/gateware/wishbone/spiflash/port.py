@@ -103,7 +103,7 @@ class SPIControlPortCrossbar(wiring.Component):
         self._num_ports = num_ports
 
         super().__init__(dict(
-            master=Out(SPIControlPort(data_width)),
+            controller=Out(SPIControlPort(data_width)),
             **{f"slave{i}": In(SPIControlPort(data_width)) for i in range(num_ports)}
         ))
 
@@ -121,7 +121,7 @@ class SPIControlPortCrossbar(wiring.Component):
         with m.Switch(rr.grant):
             for i in range(self._num_ports):
                 with m.Case(i):
-                    connect(m, wiring.flipped(self.get_port(i)), wiring.flipped(self.master))
+                    connect(m, wiring.flipped(self.get_port(i)), wiring.flipped(self.controller))
                     m.d.comb += grant_update.eq(~rr.valid | ~rr.requests[i])
 
         return m
