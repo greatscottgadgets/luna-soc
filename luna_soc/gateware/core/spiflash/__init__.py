@@ -6,18 +6,39 @@
 
 # Based on code from LiteSPI
 
-from amaranth               import Elaboratable, Module
-from amaranth.lib.wiring    import connect
+from amaranth               import Elaboratable, Module, unsigned
+from amaranth.lib           import wiring
+from amaranth.lib.wiring    import connect, In, Out
 
 from .port                  import SPIControlPortCDC, SPIControlPortCrossbar
 from .mmap                  import SPIFlashMemoryMap
 from .controller            import SPIController
 from .phy                   import SPIPHYController, ECP5ConfigurationFlashInterface
 
-__all__ = ["ECP5ConfigurationFlashInterface", "SPIPHYController", "SPIFlashPeripheral"]
+__all__ = ["PinSignature", "Peripheral", "ECP5ConfigurationFlashInterface", "SPIPHYController"]
 
 
-class SPIFlashPeripheral(Elaboratable):
+class PinSignature(wiring.Signature):
+    """TODO
+    """
+    def __init__(self):
+        super().__init__({
+            "dq" : In(
+                wiring.Signature({
+                    "i"  :  In  (unsigned(4)),
+                    "o"  :  Out (unsigned(4)),
+                    "oe" :  Out (unsigned(1)),
+                })
+            ),
+            "cs" : Out(
+                wiring.Signature({
+                    "o"  :  Out (unsigned(1)),
+                })
+            ),
+        })
+
+
+class Peripheral(wiring.Component):
     """SPI Flash peripheral main module.
 
     This class provides a wrapper that can instantiate both ``SPIController`` and
@@ -72,7 +93,10 @@ class SPIFlashPeripheral(Elaboratable):
             )
 
             for i, core in enumerate(self.cores):
-                connect(m, core, crossbar.get_port(i))
+                #connect(m, core, crossbar.get_port(i))
+                connect(m, core.source, crossbar.get_port(i).source)
+                connect(m, core.sink, crossbar.get_port(i).sink)
+                m.d.comb += crossbar.get_port(i).cs  .eq(core.cs)
 
             phy_controller = crossbar.controller
         else:
