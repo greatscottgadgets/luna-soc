@@ -9,16 +9,16 @@
 from amaranth                           import Signal, Module, Cat, C, DomainRenamer
 from amaranth.utils                     import log2_int
 from amaranth.lib                       import wiring
+from amaranth.lib.wiring                import In, Out, flipped, connect
 
-from ...vendor.amaranth_soc             import wishbone
-from ...vendor.amaranth_soc.memory      import MemoryMap
-from ...vendor.lambdasoc.periph         import Peripheral
+from amaranth_soc                       import wishbone
+from amaranth_soc.memory                import MemoryMap
 
 from .port                              import SPIControlPort
 from .utils                             import WaitTimer
 
 
-class SPIFlashMemoryMap(Peripheral, wiring.Component):
+class SPIFlashMemoryMap(wiring.Component):
     """Wishbone Memory-mapped SPI Flash controller.
 
     Supports sequential accesses so that command and address is only sent when necessary.
@@ -34,7 +34,6 @@ class SPIFlashMemoryMap(Peripheral, wiring.Component):
 
     def __init__(self, *, size, data_width=32, granularity=8, name=None, domain="sync", byteorder="little"):
         wiring.Component.__init__(self, SPIControlPort(data_width))
-        Peripheral.__init__(self)
 
         self._name     = name
         self._size     = size
@@ -47,14 +46,23 @@ class SPIFlashMemoryMap(Peripheral, wiring.Component):
         mm_addr_width  = log2_int(self._size)
         mm_data_width  = granularity
 
-        self.bus = wishbone.Interface(
-            addr_width=wb_addr_width,
-            data_width=wb_data_width,
-            granularity=granularity,
-        )
+        # self.bus = wishbone.Interface(
+        #     addr_width=wb_addr_width,
+        #     data_width=wb_data_width,
+        #     granularity=granularity,
+        # )
 
-        map = MemoryMap(addr_width=mm_addr_width, data_width=mm_data_width, name=self._name)
+        map = MemoryMap(addr_width=mm_addr_width, data_width=mm_data_width)
         map.add_resource(self, name=self._name, size=self._size)
+
+
+        super().__init__({
+            "bus" : In(wishbone.Signature(
+                addr_width=wb_addr_width,
+                data_width=wb_data_width,
+                granularity=granularity,
+            )),
+        })
         self.bus.memory_map = map
 
     @staticmethod
