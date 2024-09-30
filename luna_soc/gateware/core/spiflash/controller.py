@@ -6,30 +6,77 @@
 
 # Based on code from LiteSPI
 
-from amaranth                           import Module, DomainRenamer, Signal
+from amaranth                           import Module, DomainRenamer, Signal, unsigned
 from amaranth.lib                       import wiring
 from amaranth.lib.fifo                  import SyncFIFO
 from amaranth.lib.data                  import StructLayout, View
+from amaranth.lib.wiring                import In, Out, flipped, connect
 
-from ...vendor.lambdasoc.periph         import Peripheral
+from amaranth_soc                       import csr
 
 from .port                              import SPIControlPort
 
 
-class SPIController(Peripheral, wiring.Component):
+class SPIController(wiring.Component):
     """Wishbone generic SPI Flash Controller interface.
 
     Provides a generic SPI Controller that can be interfaced using CSRs.
     Supports multiple access modes with the help of ``width`` and ``mask`` registers which
     can be used to configure the PHY into any supported SDR mode (single/dual/quad/octal).
     """
+
+    class Phy(csr.Register, access="rw"):
+        """PHY control register
+
+            length : SPI transfer length in bits.
+            width  : SPI transfer bus width (1/2/4/8).
+            mask   : SPI DQ output enable mask.
+            cs     : SPI chip select signal.
+        """
+        def __init__(self, source):
+            super().__init__({
+                "length" : csr.Field(csr.action.RW, unsigned(len(source.len))),
+                "width"  : csr.Field(csr.action.RW, unsigned(len(source.width))),
+                "mask"   : csr.Field(csr.action.RW, unsigned(len(source.mask))),
+                #"cs"     : csr.Field(csr.action.RW, unsigned(1)),
+            })
+
+    class Cs(csr.Register, access="rw"):
+        """SPI chip select register
+
+            selected : SPI chip select signal.
+        """
+        select : csr.Field(csr.action.RW, unsigned(1))
+
+    class Rx(csr.Register, access="rw"):
+        """Receive register
+
+            ready : RX FIFO contains data.
+        """
+        def __init__(self, width):
+            super().__init__({
+                "data"  : csr.Field(csr.action.R, unsigned(width)),
+                "ready" : csr.Field(csr.action.R, unsigned(1))
+            })
+
+    class Tx(csr.Register, access="rw"):
+        """Transmit register
+
+            ready : TX FIFO ready to be written.
+        """
+        def __init__(self, width):
+            super().__init__({
+                "data"  : csr.Field(csr.action.W, unsigned(width)),
+                "ready" : csr.Field(csr.action.R, unsigned(1))
+            })
+
+
     def __init__(self, *, data_width=32, granularity=8, rx_depth=16, tx_depth=16, name=None, domain="sync"):
         wiring.Component.__init__(self, SPIControlPort(data_width))
-        Peripheral.__init__(self, name=name)
 
         self._domain   = domain
 
-        # Layout description for writing to the TX FIFO.
+        # layout description for writing to the tx fifo
         self.tx_fifo_layout = StructLayout({
             "data":  len(self.source.data),
             "len":   len(self.source.len),
@@ -37,26 +84,26 @@ class SPIController(Peripheral, wiring.Component):
             "mask":  len(self.source.mask),
         })
 
-        # FIFOs.
+        # fifos
         self._rx_fifo = DomainRenamer(domain)(SyncFIFO(width=len(self.sink.payload), depth=rx_depth))
         self._tx_fifo = DomainRenamer(domain)(SyncFIFO(width=len(self.source.payload), depth=tx_depth))
 
-        # CSRs.
-        self.bank = bank = self.csr_bank()
+        # registers
+        regs = csr.Builder(addr_width=5, data_width=8)
+        self._phy  = regs.add("phy",  self.Phy(self.source))
+        self._cs   = regs.add("cs",   self.Cs())
+        self._rx   = regs.add("rx",   self.Rx(data_width))
+        self._tx   = regs.add("tx",   self.Tx(data_width))
+        self._bridge = csr.Bridge(regs.as_memory_map())
 
-        self._phy_len   = bank.csr(len(self.source.len), "rw")    # SPI transfer length in bits.
-        self._phy_width = bank.csr(len(self.source.width), "rw")  # SPI transfer bus width (1/2/4/8).
-        self._phy_mask  = bank.csr(len(self.source.mask), "rw")   # SPI DQ output enable mask.
-        self._cs        = bank.csr(1, "rw")                       # SPI chip select signal.
+        # csr decoder
+        self._decoder = csr.Decoder(addr_width=6, data_width=8)
+        self._decoder.add(self._bridge.bus)
 
-        self._rxtx      = bank.csr(data_width, "rw")              # Read/Write register, connected to FIFOs.
-
-        self._tx_rdy    = bank.csr(1, "r")                        # TX FIFO ready to be written.
-        self._rx_rdy    = bank.csr(1, "r")                        # RX FIFO contains data.
-
-        # Create Wishbone bridge.
-        self._bridge    = self.bridge(data_width=data_width, granularity=granularity)
-        self.bus        = self._bridge.bus
+        super().__init__({
+            "bus" : In(self._decoder.bus.signature),
+        })
+        self.bus.memory_map = self._decoder.bus.memory_map
 
 
     def elaborate(self, platform):
@@ -70,9 +117,9 @@ class SPIController(Peripheral, wiring.Component):
         m.submodules.tx_fifo = tx_fifo = self._tx_fifo
 
         # Register values for a set of CSRs.
-        for reg in [self._phy_len, self._phy_mask, self._phy_width, self._cs]:
-            with m.If(reg.w_stb):
-                m.d.sync += reg.r_data.eq(reg.w_data)
+        #for reg in [self._phy_len, self._phy_mask, self._phy_width, self._cs]:
+        #    with m.If(reg.w_stb):
+        #        m.d.sync += reg.r_data.eq(reg.w_data)
 
         # Chip select generation.
         cs = Signal()
@@ -84,7 +131,7 @@ class SPIController(Peripheral, wiring.Component):
                     m.next = "FALL"
             with m.State("FALL"):
                 # Only disable chip select after the current TX FIFO is emptied.
-                m.d.comb += cs.eq(self._cs.r_data | tx_fifo.r_rdy)
+                m.d.comb += cs.eq(self._cs.f.select.data | tx_fifo.r_rdy)
                 with m.If(cs == 0):
                     m.next = "RISE"
 
@@ -92,11 +139,11 @@ class SPIController(Peripheral, wiring.Component):
         tx_fifo_payload = View(self.tx_fifo_layout, tx_fifo.w_data)
         m.d.comb += [
             # CSRs to TX FIFO.
-            tx_fifo_payload.data    .eq(self._rxtx.w_data),
-            tx_fifo_payload.len     .eq(self._phy_len.r_data),
-            tx_fifo_payload.width   .eq(self._phy_width.r_data),
-            tx_fifo_payload.mask    .eq(self._phy_mask.r_data),
-            tx_fifo.w_en            .eq(self._rxtx.w_stb),
+            tx_fifo_payload.data    .eq(self._tx.f.data.w_data),
+            tx_fifo_payload.len     .eq(self._phy.f.length.data),
+            tx_fifo_payload.width   .eq(self._phy.f.width.data),
+            tx_fifo_payload.mask    .eq(self._phy.f.mask.data),
+            tx_fifo.w_en            .eq(self._tx.f.data.w_stb),
 
             # SPI chip select.
             self.cs                 .eq(cs),
@@ -112,12 +159,12 @@ class SPIController(Peripheral, wiring.Component):
             self.sink.ready         .eq(rx_fifo.w_rdy),
 
             # RX FIFO to CSRs.
-            rx_fifo.r_en            .eq(self._rxtx.r_stb),
-            self._rxtx.r_data       .eq(rx_fifo.r_data),
+            rx_fifo.r_en            .eq(self._rx.f.data.r_stb),
+            self._rx.f.data.r_data  .eq(rx_fifo.r_data),
 
             # FIFOs ready flags.
-            self._rx_rdy.r_data     .eq(rx_fifo.r_rdy),
-            self._tx_rdy.r_data     .eq(tx_fifo.w_rdy),
+            self._rx.f.ready.r_data     .eq(rx_fifo.r_rdy),
+            self._tx.f.ready.r_data     .eq(tx_fifo.w_rdy),
         ]
 
         # Convert our sync domain to the domain requested by the user, if necessary.
