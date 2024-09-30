@@ -1,26 +1,26 @@
 #
 # This file is part of LUNA.
 #
-# Copyright (c) 2020 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2020-2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
+
 """
-Contains the organizing hardware used to add USB Device functionality
+Contains the organizing gateware used to add USB Device functionality
 to your own designs; including the core :class:`USBDevice` class.
 """
 
 import logging
 
-from amaranth                      import Signal, Module, Elaboratable, Const
+from amaranth              import *
+from amaranth.lib          import wiring
+from amaranth.lib.wiring   import In, Out, connect, flipped
 
-from luna                          import configure_default_logging
+from amaranth_soc          import csr, event
+
 from luna.gateware.usb.usb2.device import USBDevice
 
-from ..base import Peripheral
 
-__all__ = ["USBDeviceController"]
-
-
-class USBDeviceController(Peripheral, Elaboratable):
+class Peripheral(wiring.Component):
     """ SoC controller for a USBDevice.
 
     Breaks our USBDevice control and status signals out into registers so a CPU / Wishbone master
@@ -38,49 +38,60 @@ class USBDeviceController(Peripheral, Elaboratable):
 
     """
 
-    def __init__(self):
-        super().__init__()
+    class Control(csr.Register, access="rw"):
+        """Control register
 
-        #
-        # I/O port
-        #
-        self.connect   = Signal(reset=1)
-        self.bus_reset = Signal()
-        self.low_speed_only = Signal()
+            connect:         Set this bit to '1' to allow the associated USB device to connect to a host.
+            low_speed_only:  Set this bit to '1' to force the device to operate at low speed.
+            full_speed_only: Set this bit to '1' to force the device to operate at full speed.
+        """
+        connect         : csr.Field(csr.action.RW,      unsigned(1)) # desc="" ?
+        _0              : csr.Field(csr.action.ResRAW0, unsigned(7))
+        low_speed_only  : csr.Field(csr.action.RW,      unsigned(1))
+        full_speed_only : csr.Field(csr.action.RW,      unsigned(1))
+        _1              : csr.Field(csr.action.ResRAW0, unsigned(6))
+
+    class Status(csr.Register, access="r"):
+        """Status register
+
+            speed: Indicates the current speed of the USB device. 0 indicates High; 1 => Full,
+                   2 => Low, and 3 => SuperSpeed (incl SuperSpeed+).
+        """
+        speed : csr.Field(csr.action.R,       unsigned(2)) # desc="" ?
+        _0    : csr.Field(csr.action.ResRAW0, unsigned(6))
+
+    def __init__(self):
+        # I/O ports  FIXME ambiguity - private? or wiring.connect() ?
+        self.connect         = Signal(reset=1)
+        self.bus_reset       = Signal()
+        self.low_speed_only  = Signal()
         self.full_speed_only = Signal()
 
-        #
-        # Registers.
-        #
+        # registers
+        regs = csr.Builder(addr_width=3, data_width=8)
+        self._control = regs.add("control", self.Control())
+        self._status  = regs.add("status",  self.Status())
+        self._bridge = csr.Bridge(regs.as_memory_map())
 
-        regs = self.csr_bank()
-        self._connect = regs.csr(1, "rw", desc="""
-            Set this bit to '1' to allow the associated USB device to connect to a host.
-        """)
+        # events
+        # TODO desc="Interrupt that occurs when a USB bus reset is received."
+        self._reset = event.Source(path=("reset",)) # desc="" ?
+        event_map = event.EventMap()
+        event_map.add(self._reset)
+        self._events = csr.event.EventMonitor(event_map, data_width=8) # TODO width=1 ?
 
-        self._speed = regs.csr(2, "r", desc="""
-            Indicates the current speed of the USB device. 0 indicates High; 1 => Full,
-            2 => Low, and 3 => SuperSpeed (incl SuperSpeed+).
-        """)
+        # csr decoder
+        self._decoder = csr.Decoder(addr_width=4, data_width=8)
+        self._decoder.add(self._bridge.bus)
+        self._decoder.add(self._events.bus, name="ev")
 
-        self._low_speed_only = regs.csr(1, "rw", desc="""
-            Set this bit to '1' to force the device to operate at low speed.
-        """)
+        super().__init__({
+            "bus":    Out(self._decoder.bus.signature),
+            "irq":    Out(unsigned(1)),
+        })
+        self.bus.memory_map = self._decoder.bus.memory_map
 
-        self._full_speed_only = regs.csr(1, "rw", desc="""
-            Set this bit to '1' to force the device to operate at full speed.
-        """)
-
-        self._reset_irq = self.event(mode="rise", name="reset", desc="""
-            Interrupt that occurs when a USB bus reset is received.
-        """)
-
-        # Wishbone connection.
-        self._bridge    = self.bridge(data_width=32, granularity=8, alignment=2)
-        self.bus        = self._bridge.bus
-        self.irq        = self._bridge.irq
-
-
+    # TODO wiring.connect() ?
     def attach(self, device: USBDevice):
         """ Returns a list of statements necessary to connect this to a USB controller.
 
@@ -94,33 +105,33 @@ class USBDeviceController(Peripheral, Elaboratable):
             The :class:`USBDevice` object to be controlled.
         """
         return [
-            device.connect          .eq(self.connect),
-            device.low_speed_only   .eq(self.low_speed_only),
-            device.full_speed_only  .eq(self.full_speed_only),
-            self.bus_reset          .eq(device.reset_detected),
-            self._speed.r_data      .eq(device.speed)
+            device.connect               .eq(self.connect),
+            device.low_speed_only        .eq(self.low_speed_only),
+            device.full_speed_only       .eq(self.full_speed_only),
+            self.bus_reset               .eq(device.reset_detected),
+            self._status.f.speed.r_data  .eq(device.speed)
         ]
 
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.bridge = self._bridge
+        m.submodules += [self._bridge, self._events, self._decoder]
+
+        # connect bus
+        connect(m, flipped(self.bus), self._decoder.bus)
 
         # Core connection register.
-        m.d.comb += self.connect.eq(self._connect.r_data)
-        with m.If(self._connect.w_stb):
-            m.d.usb += self._connect.r_data.eq(self._connect.w_data)
+        m.d.comb += self.connect.eq(self._control.f.connect.data)
 
         # Speed configuration registers.
-        m.d.comb += self.low_speed_only.eq(self._low_speed_only.r_data)
-        with m.If(self._low_speed_only.w_stb):
-            m.d.usb += self._low_speed_only.r_data.eq(self._low_speed_only.w_data)
+        m.d.comb += self.low_speed_only.eq(self._control.f.low_speed_only.data)
 
-        m.d.comb += self.full_speed_only.eq(self._full_speed_only.r_data)
-        with m.If(self._full_speed_only.w_stb):
-            m.d.usb += self._full_speed_only.r_data.eq(self._full_speed_only.w_data)
+        m.d.comb += self.full_speed_only.eq(self._control.f.full_speed_only.data)
 
-        # Reset-detection event.
-        m.d.comb += self._reset_irq.stb.eq(self.bus_reset)
+        # event: buus reset detected
+        m.d.comb += self._reset.i.eq(self.bus_reset)
+
+        # connect events to irq line
+        m.d.comb += self.irq.eq(self._events.src.i)
 
         return m
