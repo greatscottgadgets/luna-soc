@@ -1,141 +1,114 @@
-#
-# This file is part of LUNA.
-#
-# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
-# SPDX-License-Identifier: BSD-3-Clause
+from amaranth              import *
+from amaranth.lib          import wiring
+from amaranth.lib.wiring   import In, Out, flipped, connect
 
-from amaranth import *
-from amaranth.lib.fifo import SyncFIFO
+from amaranth_soc          import csr
+from amaranth_stdio.serial import AsyncSerialRX, AsyncSerialTX
 
-from ..vendor.amaranth_stdio.serial import AsyncSerial
 
-from .base import Peripheral
+__all__ = ["PinSignature", "Peripheral"]
 
-__all__ = ["UARTPeripheral"]
 
-class UARTPeripheral(Peripheral, Elaboratable):
-    """Asynchronous serial transceiver peripheral.
+class PinSignature(wiring.Signature):
+    """UART pin signature.
 
-    See :class:`amaranth_stdio.serial.AsyncSerial` for details.
-
-    CSR registers
-    -------------
-    divisor : read/write
-        Clock divisor.
-    rx_data : read-only
-        Receiver data.
-    rx_rdy : read-only
-        Receiver ready. The receiver FIFO is non-empty.
-    rx_err : read-only
-        Receiver error flags. See :class:`amaranth_stdio.serial.AsyncSerialRX` for layout.
-    tx_data : write-only
-        Transmitter data.
-    tx_rdy : read-only
-        Transmitter ready. The transmitter FIFO is non-full.
-
-    Events
-    ------
-    rx_rdy : level-triggered
-        Receiver ready. The receiver FIFO is non-empty.
-    rx_err : edge-triggered (rising)
-        Receiver error. Error cause is available in the ``rx_err`` register.
-    tx_mty : edge-triggered (rising)
-        Transmitter empty. The transmitter FIFO is empty.
-
-    Parameters
-    ----------
-    rx_depth : int
-        Depth of the receiver FIFO.
-    tx_depth : int
-        Depth of the transmitter FIFO.
-    divisor : int
-        Clock divisor reset value. Should be set to ``int(clk_frequency // baudrate)``.
-    divisor_bits : int
-        Optional. Clock divisor width. If omitted, ``bits_for(divisor)`` is used instead.
-    data_bits : int
-        Data width.
-    parity : ``"none"``, ``"mark"``, ``"space"``, ``"even"``, ``"odd"``
-        Parity mode.
-    pins : :class:`Record`
-        Optional. UART pins. See :class:`amaranth_boards.resources.UARTResource`.
-
-    Attributes
-    ----------
-    bus : :class:`amaranth_soc.wishbone.Interface`
-        Wishbone bus interface.
-    irq : :class:`IRQLine`
-        Interrupt request line.
+    Interface attributes
+    --------------------
+    tx : :class:`Signal`
+        Output.
+    rx : :class:`Signal`
+        Input.
     """
-    def __init__(self, *, rx_depth=16, tx_depth=16, **kwargs):
-        super().__init__()
+    def __init__(self):
+        super().__init__({
+            "tx":  Out(unsigned(1)),
+            "rx":  In(unsigned(1)),
+        })
 
-        self._phy       = AsyncSerial(**kwargs)
-        self._rx_fifo   = SyncFIFO(width=self._phy.rx.data.width, depth=rx_depth)
-        self._tx_fifo   = SyncFIFO(width=self._phy.tx.data.width, depth=tx_depth)
 
-        bank            = self.csr_bank()
-        self._enabled   = bank.csr(1, "w")
-        self._divisor   = bank.csr(self._phy.divisor.width, "rw")
-        self._rx_data   = bank.csr(self._phy.rx.data.width, "r")
-        self._rx_rdy    = bank.csr(1, "r")
-        self._rx_err    = bank.csr(len(self._phy.rx.err),   "r")
-        self._tx_data   = bank.csr(self._phy.tx.data.width, "w")
-        self._tx_rdy    = bank.csr(1, "r")
+class Peripheral(wiring.Component):
+    # FIXME group registers
+    class TxData(csr.Register, access="w"):
+        """valid to write to when tx_rdy is high, will trigger a transmit"""
+        data: csr.Field(csr.action.W, unsigned(8))
 
-        self._rx_rdy_ev = self.event(mode="level")
-        self._rx_err_ev = self.event(mode="rise")
-        self._tx_mty_ev = self.event(mode="rise")
+    class RxData(csr.Register, access="r"):
+        """valid to read from when rx_avail is high, last received byte"""
+        data: csr.Field(csr.action.R, unsigned(8))
 
-        self._bridge    = self.bridge(data_width=32, granularity=8, alignment=2)
-        self.bus        = self._bridge.bus
-        self.irq        = self._bridge.irq
+    class TxReady(csr.Register, access="r"):
+        """is '1' when 1-byte transmit buffer is empty"""
+        txe: csr.Field(csr.action.R, unsigned(1))
 
-        self.tx         = Signal()
-        self.rx         = Signal()
-        self.enabled    = Signal()
-        self.driving    = Signal()
+    class RxAvail(csr.Register, access="r"):
+        """is '1' when 1-byte receive buffer is full; reset by a read from rx_data"""
+        rxe: csr.Field(csr.action.R, unsigned(1))
+
+    class BaudRate(csr.Register, access="rw"):
+        """baud rate divider, defaults to init"""
+        def __init__(self, init):
+            super().__init__({
+                "div": csr.Field(csr.action.RW, unsigned(24), init=init),
+            })
+
+
+    """A minimal UART."""
+    def __init__(self, *, divisor):
+        self._init_divisor = divisor
+
+        regs = csr.Builder(addr_width=5, data_width=8)
+
+        self._tx_data   = regs.add("tx_data",  self.TxData(),  offset=0x00)
+        self._rx_data   = regs.add("rx_data",  self.RxData(),  offset=0x04)
+        self._tx_ready  = regs.add("tx_ready", self.TxReady(), offset=0x08)
+        self._rx_avail  = regs.add("rx_avail", self.RxAvail(), offset=0x0c)
+        self._divisor   = regs.add("divisor",  self.BaudRate(init=self._init_divisor), offset=0x10)
+
+        # bridge
+        self._bridge = csr.Bridge(regs.as_memory_map())
+
+        super().__init__({
+            "bus":  In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
+            "pins": Out(PinSignature()),
+        })
+        self.bus.memory_map = self._bridge.bus.memory_map
+
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.bridge  = self._bridge
+        m.submodules.bridge = self._bridge
 
-        m.submodules.phy     = self._phy
-        m.submodules.rx_fifo = self._rx_fifo
-        m.submodules.tx_fifo = self._tx_fifo
+        connect(m, flipped(self.bus), self._bridge.bus)
 
-        m.d.comb += self._divisor.r_data.eq(self._phy.divisor)
-        with m.If(self._divisor.w_stb):
-            m.d.sync += self._phy.divisor.eq(self._divisor.w_data)
+        m.submodules.tx = tx = AsyncSerialTX(divisor=self._init_divisor, divisor_bits=24)
+        m.d.comb += [
+            self.pins.tx.eq(tx.o),
+            tx.data.eq(self._tx_data.f.data.w_data),
+            tx.ack.eq(self._tx_data.f.data.w_stb),
+            self._tx_ready.f.txe.r_data.eq(tx.rdy),
+            tx.divisor.eq(self._divisor.f.div.data)
+        ]
 
-        # Control our UART's enable state.
-        with m.If(self._enabled.w_stb):
-            m.d.sync += self.enabled.eq(self._enabled.w_data)
+        rx_buf = Signal(unsigned(8))
+        rx_avail = Signal()
+
+        m.submodules.rx = rx = AsyncSerialRX(divisor=self._init_divisor, divisor_bits=24)
+
+        with m.If(self._rx_data.f.data.r_stb):
+            m.d.sync += rx_avail.eq(0)
+
+        with m.If(rx.rdy):
+            m.d.sync += [
+                rx_buf.eq(rx.data),
+                rx_avail.eq(1)
+            ]
 
         m.d.comb += [
-            self._rx_data.r_data  .eq(self._rx_fifo.r_data),
-            self._rx_fifo.r_en    .eq(self._rx_data.r_stb),
-            self._rx_rdy.r_data   .eq(self._rx_fifo.r_rdy),
-
-            self._rx_fifo.w_data  .eq(self._phy.rx.data),
-            self._rx_fifo.w_en    .eq(self._phy.rx.rdy),
-            self._phy.rx.ack      .eq(self._rx_fifo.w_rdy),
-            self._rx_err.r_data   .eq(self._phy.rx.err),
-
-            self._tx_fifo.w_en    .eq(self._tx_data.w_stb & self.enabled),
-            self._tx_fifo.w_data  .eq(self._tx_data.w_data),
-            self._tx_rdy.r_data   .eq(self._tx_fifo.w_rdy),
-
-            self._phy.tx.data     .eq(self._tx_fifo.r_data),
-            self._phy.tx.ack      .eq(self._tx_fifo.r_rdy),
-            self._tx_fifo.r_en    .eq(self._phy.tx.rdy),
-
-            self._rx_rdy_ev.stb   .eq(self._rx_fifo.r_rdy),
-            self._rx_err_ev.stb   .eq(self._phy.rx.err.any()),
-            self._tx_mty_ev.stb   .eq(~self._tx_fifo.r_rdy),
-
-            self.tx               .eq(self._phy.tx.o),
-            self._phy.rx.i        .eq(self.rx),
-            self.driving          .eq(~self._phy.tx.rdy)
+            rx.i.eq(self.pins.rx),
+            rx.ack.eq(~rx_avail),
+            rx.divisor.eq(self._divisor.f.div.data),
+            self._rx_data.f.data.r_data.eq(rx_buf),
+            self._rx_avail.f.rxe.r_data.eq(rx_avail)
         ]
 
         return m
