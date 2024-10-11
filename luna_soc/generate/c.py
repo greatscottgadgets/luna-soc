@@ -8,12 +8,12 @@
 
 import datetime
 
-import luna_soc.gateware.vendor.amaranth_soc
+import amaranth_soc
 
 from ..gateware.lunasoc import LunaSoC
 
 
-class GenC():
+class GenerateC():
 
     def __init__(self, soc: LunaSoC):
         self._soc = soc
