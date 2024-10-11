@@ -93,7 +93,6 @@ class Peripheral(wiring.Component):
             )
 
             for i, core in enumerate(self.cores):
-                #connect(m, core, crossbar.get_port(i))
                 connect(m, core.source, crossbar.get_port(i).source)
                 connect(m, core.sink, crossbar.get_port(i).sink)
                 m.d.comb += crossbar.get_port(i).cs  .eq(core.cs)
@@ -112,6 +111,8 @@ class Peripheral(wiring.Component):
             connect(m, phy_controller, cdc.a)
             connect(m, cdc.b, phy)
         else:
-            connect(m, phy_controller, phy)
+            connect(m, phy_controller.source, phy.source)
+            connect(m, phy_controller.sink, phy.sink)
+            m.d.comb += phy.cs .eq(phy_controller.cs)
 
         return m

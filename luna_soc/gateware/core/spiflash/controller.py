@@ -31,43 +31,40 @@ class SPIController(wiring.Component):
             length : SPI transfer length in bits.
             width  : SPI transfer bus width (1/2/4/8).
             mask   : SPI DQ output enable mask.
-            cs     : SPI chip select signal.
         """
         def __init__(self, source):
             super().__init__({
                 "length" : csr.Field(csr.action.RW, unsigned(len(source.len))),
                 "width"  : csr.Field(csr.action.RW, unsigned(len(source.width))),
                 "mask"   : csr.Field(csr.action.RW, unsigned(len(source.mask))),
-                #"cs"     : csr.Field(csr.action.RW, unsigned(1)),
             })
 
-    class Cs(csr.Register, access="rw"):
+    class Cs(csr.Register, access="w"):
         """SPI chip select register
 
-            selected : SPI chip select signal.
+            select : SPI chip select signal.
         """
-        select : csr.Field(csr.action.RW, unsigned(1))
+        select : csr.Field(csr.action.W, unsigned(1))
 
-    class Rx(csr.Register, access="rw"):
-        """Receive register
+    class Status(csr.Register, access="r"):
+        """Status register
 
-            ready : RX FIFO contains data.
+             rx_ready : RX FIFO contains data.
+             tx_ready : TX FIFO ready to receive data.
+        """
+        rx_ready : csr.Field(csr.action.R, unsigned(1))
+        tx_ready : csr.Field(csr.action.R, unsigned(1))
+
+    class Data(csr.Register, access="rw"):
+        """Data register
+
+            rx : Read the next byte in the RX FIFO
+            tx : Write the given byte to the TX FIFO
         """
         def __init__(self, width):
             super().__init__({
-                "data"  : csr.Field(csr.action.R, unsigned(width)),
-                "ready" : csr.Field(csr.action.R, unsigned(1))
-            })
-
-    class Tx(csr.Register, access="rw"):
-        """Transmit register
-
-            ready : TX FIFO ready to be written.
-        """
-        def __init__(self, width):
-            super().__init__({
-                "data"  : csr.Field(csr.action.W, unsigned(width)),
-                "ready" : csr.Field(csr.action.R, unsigned(1))
+                "rx" : csr.Field(csr.action.R, unsigned(width)),
+                "tx" : csr.Field(csr.action.W, unsigned(width))
             })
 
 
@@ -90,36 +87,29 @@ class SPIController(wiring.Component):
 
         # registers
         regs = csr.Builder(addr_width=5, data_width=8)
-        self._phy  = regs.add("phy",  self.Phy(self.source))
-        self._cs   = regs.add("cs",   self.Cs())
-        self._rx   = regs.add("rx",   self.Rx(data_width))
-        self._tx   = regs.add("tx",   self.Tx(data_width))
+        self._phy    = regs.add("phy",    self.Phy(self.source))
+        self._cs     = regs.add("cs",     self.Cs())
+        self._status = regs.add("status", self.Status())
+        self._data   = regs.add("data",   self.Data(data_width))
+
+        # bridge
         self._bridge = csr.Bridge(regs.as_memory_map())
 
-        # csr decoder
-        self._decoder = csr.Decoder(addr_width=6, data_width=8)
-        self._decoder.add(self._bridge.bus)
-
         super().__init__({
-            "bus" : In(self._decoder.bus.signature),
+            "bus" : In(self._bridge.bus.signature),
         })
-        self.bus.memory_map = self._decoder.bus.memory_map
+        self.bus.memory_map = self._bridge.bus.memory_map
 
 
     def elaborate(self, platform):
         m = Module()
-
-        # Wishbone-CSR bridge.
         m.submodules.bridge = self._bridge
+
+        connect(m, self.bus, self._bridge.bus)
 
         # FIFOs.
         m.submodules.rx_fifo = rx_fifo = self._rx_fifo
         m.submodules.tx_fifo = tx_fifo = self._tx_fifo
-
-        # Register values for a set of CSRs.
-        #for reg in [self._phy_len, self._phy_mask, self._phy_width, self._cs]:
-        #    with m.If(reg.w_stb):
-        #        m.d.sync += reg.r_data.eq(reg.w_data)
 
         # Chip select generation.
         cs = Signal()
@@ -131,7 +121,7 @@ class SPIController(wiring.Component):
                     m.next = "FALL"
             with m.State("FALL"):
                 # Only disable chip select after the current TX FIFO is emptied.
-                m.d.comb += cs.eq(self._cs.f.select.data | tx_fifo.r_rdy)
+                m.d.comb += cs.eq(self._cs.f.select.w_data | tx_fifo.r_rdy)
                 with m.If(cs == 0):
                     m.next = "RISE"
 
@@ -139,32 +129,32 @@ class SPIController(wiring.Component):
         tx_fifo_payload = View(self.tx_fifo_layout, tx_fifo.w_data)
         m.d.comb += [
             # CSRs to TX FIFO.
-            tx_fifo_payload.data    .eq(self._tx.f.data.w_data),
-            tx_fifo_payload.len     .eq(self._phy.f.length.data),
-            tx_fifo_payload.width   .eq(self._phy.f.width.data),
-            tx_fifo_payload.mask    .eq(self._phy.f.mask.data),
-            tx_fifo.w_en            .eq(self._tx.f.data.w_stb),
+            tx_fifo.w_en                   .eq(self._data.f.tx.w_stb),
+            tx_fifo_payload.data           .eq(self._data.f.tx.w_data),
+            tx_fifo_payload.len            .eq(self._phy.f.length.data),
+            tx_fifo_payload.width          .eq(self._phy.f.width.data),
+            tx_fifo_payload.mask           .eq(self._phy.f.mask.data),
 
             # SPI chip select.
-            self.cs                 .eq(cs),
+            self.cs                        .eq(cs),
 
             # TX FIFO to SPI PHY (PICO).
-            self.source.payload     .eq(tx_fifo.r_data),
-            self.source.valid       .eq(tx_fifo.r_rdy),
-            tx_fifo.r_en            .eq(self.source.ready),
+            self.source.payload            .eq(tx_fifo.r_data),
+            self.source.valid              .eq(tx_fifo.r_rdy),
+            tx_fifo.r_en                   .eq(self.source.ready),
 
             # SPI PHY (POCI) to RX FIFO.
-            rx_fifo.w_data          .eq(self.sink.payload),
-            rx_fifo.w_en            .eq(self.sink.valid),
-            self.sink.ready         .eq(rx_fifo.w_rdy),
+            rx_fifo.w_data                 .eq(self.sink.payload),
+            rx_fifo.w_en                   .eq(self.sink.valid),
+            self.sink.ready                .eq(rx_fifo.w_rdy),
 
             # RX FIFO to CSRs.
-            rx_fifo.r_en            .eq(self._rx.f.data.r_stb),
-            self._rx.f.data.r_data  .eq(rx_fifo.r_data),
+            rx_fifo.r_en                   .eq(self._data.f.rx.r_stb),
+            self._data.f.rx.r_data         .eq(rx_fifo.r_data),
 
             # FIFOs ready flags.
-            self._rx.f.ready.r_data     .eq(rx_fifo.r_rdy),
-            self._tx.f.ready.r_data     .eq(tx_fifo.w_rdy),
+            self._status.f.rx_ready.r_data .eq(rx_fifo.r_rdy),
+            self._status.f.tx_ready.r_data .eq(tx_fifo.w_rdy),
         ]
 
         # Convert our sync domain to the domain requested by the user, if necessary.
