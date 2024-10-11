@@ -1,210 +1,270 @@
-#
-# This file is part of LUNA.
-#
-# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
-# SPDX-License-Identifier: BSD-3-Clause
-
-"""Generate a SVD file for SoC designs."""
-
-from os import path
-import logging
 import sys
+
+from collections import defaultdict
 
 from xml.dom import minidom
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
-import luna_soc.gateware.vendor.amaranth_soc
+from amaranth_soc         import csr
+from amaranth_soc.memory  import MemoryMap, ResourceInfo
 
-from  ..gateware.vendor import amaranth_soc
-from  ..gateware.vendor.amaranth_soc.memory import MemoryMap, ResourceInfo
+class Introspect():
+    """Gather information about a design for sdk generation"""
 
-from ..gateware.lunasoc import LunaSoC
+    def __init__(self, design, access="w"):
+        self.interrupts            = design.soc.interrupt_controller.interrupts
+        self.memory_map: MemoryMap = design.soc.wb_decoder.bus.memory_map
+
+    def csr_base(self):
+        window: MemoryMap
+        for window, name, (start, stop, step) in self.memory_map.windows():
+            if name[0] == "wb_to_csr":
+                return start
+
+    def csr_peripherals(self):
+        """Get all csr peripherals in design."""
+
+        # group registers by peripheral
+        csr_peripherals = defaultdict(list)
+
+        # scan memory map for peripheral registers
+        window: MemoryMap
+        for window, name, (start, stop, step) in self.memory_map.windows():
+            if name[0] != "wb_to_csr": # skip mainram and other wb's etc.
+                continue
+            # gather peripheral registers
+            resource_info: ResourceInfo
+            for resource_info in window.all_resources():
+                name     = resource_info.path[0]
+                resource = resource_info.resource
+                # append resource if it's a register
+                if issubclass(resource.__class__, csr.Register):
+                    csr_peripherals[name].append(resource_info)
+
+        return csr_peripherals
 
 
-class GenSVD:
+    def wb_peripherals(self):
+        """Get all wb peripherals in design."""
 
-    def __init__(self, soc: LunaSoC):
-        self._soc = soc
+        # group by peripheral
+        wb_peripherals = defaultdict(list)
+
+        # scan memory map for wb peripherals
+        window: MemoryMap
+        for window, name, (start, stop, end) in self.memory_map.windows():
+            for resource, path, range in window.resources():
+                wb_peripherals[name].append((resource, path, range))
+
+        return wb_peripherals
 
 
-    # - svd generation --------------------------------------------------------
+    def find_interrupt(self, name, start, end):
+        pass
 
-    def generate_svd(self, file=None, vendor="amaranth-soc", name="soc", description=None):
-        """ Generate a svd file for the given SoC"""
 
-        device = _generate_section_device(self._soc, vendor, name, description)
+
+class GenerateSVD:
+    def __init__(self, design):
+        introspect = Introspect(design)
+
+        self.csr_base        = introspect.csr_base()
+        self.csr_peripherals = introspect.csr_peripherals()
+        self.wb_peripherals  = introspect.wb_peripherals()
+        self.interrupts      = introspect.interrupts
+
+
+    def generate(self, file=None, vendor="luna-soc", name="soc", description=None):
+
+        device = self._device(vendor, name, description)
 
         # <peripherals />
         peripherals = SubElement(device, "peripherals")
+        csr_base = self.csr_base
+        print(f"\ncsr_base: 0x{csr_base:08x}")
+        for name, resource_infos in self.csr_peripherals.items():
+            # so, in theory, these are always sorted so:
+            pstart = resource_infos[0].start
+            pend   = resource_infos[-1].end
 
-        # TODO this should be determined by introspection
-        memories = ["bootrom", "scratchpad", "mainram", "ram", "rom", "spiflash"]
+            name = "_".join([str(s) for s in name]) if isinstance(name, tuple) else name[0]
+            print(f"  {name} 0x{pstart:04x} => 0x{pend:04x}  width: {pend - pstart} bytes")
+            peripheral = self._peripheral(peripherals, name, pstart + csr_base, pend + csr_base)
 
-        window: MemoryMap
-        for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name in memories:
-                logging.debug("Skipping non-peripheral resource: {}".format(window.name))
-                continue
-
-            peripheral = _generate_section_peripheral(peripherals, self._soc, window, start, stop, ratio)
+            # <registers />
             registers = SubElement(peripheral, "registers")
+            for resource_info in resource_infos:
+                name = "_".join([str(s[0]) for s in resource_info.path[1:]])
+                rstart = resource_info.start - pstart
+                rend   = resource_info.end   - pstart
+                access = resource_info.resource._access
+                access = "read-only"  if type(access) is csr.FieldPort.Access.R else \
+                         "write-only" if type(access) is csr.FieldPort.Access.W else \
+                         "read-write"
+                # description =  {resource.__class__.__doc__}")
+                description = "TODO amaranth_soc/csr/reg.py:471"
 
-            resource_info: ResourceInfo
-            for resource_info in window.all_resources():
-                register = _generate_section_register(registers, window, resource_info)
+                print(f"    {name}\t0x{rstart:02x} => 0x{rend:02x}  width: {rend - rstart} bytes")
+
+                register = self._register(
+                    registers,                     # root
+                    name,                          # name
+                    rstart,                        # register start
+                    rend,                          # register end
+                    access=access,                 # access
+                    description=description        # description
+                )
+
+                # <fields />
                 fields = SubElement(register, "fields")
-                field = _generate_section_field(fields, window, resource_info)
+                offset = 0
+                for path, action in resource_info.resource:
+                    name = "_".join([str(s) for s in path])
+                    width = action.port.shape.width
+                    access = "read-only"  if type(action) is csr.action.R else \
+                             "write-only" if type(action) is csr.action.W else \
+                             "read-write"
+                    description = "TODO amaranth_soc/csr/reg.py:471"
 
-        # <vendorExtensions />
-        vendorExtensions = SubElement(device, "vendorExtensions")
+                    bitRange = "[{:d}:{:d}]".format(offset + width - 1, offset)
 
-        memoryRegions = SubElement(vendorExtensions, "memoryRegions")
+                    print(f"      {name}\toffset:0x{offset} width: {width} bits range: {bitRange}")
 
-        window: MemoryMap
-        for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name not in memories:
-                continue
+                    field = self._field(
+                        fields,                 # root
+                        name,                   # name
+                        offset,                 # field bitOffset
+                        width,                  # field bitWidth
+                        access=access,          # access
+                        description=description # description
+                    )
 
-            memoryRegion = SubElement(memoryRegions, "memoryRegion")
-            el = SubElement(memoryRegion, "name")
-            el.text = window.name.upper()
-            el = SubElement(memoryRegion, "baseAddress")
-            el.text = "0x{:08x}".format(start)
-            el = SubElement(memoryRegion, "size")
-            el.text = "0x{:08x}".format(stop - start)
+                    offset += width
 
-        constants = SubElement(vendorExtensions, "constants")  # TODO
+        print("\nwishbone peripherals:")
+        for name, t in self.wb_peripherals.items():
+            print(f"\t{name} => {t}")
 
-        # dump
+        print("\n---------------\n")
+
+        # generate output
         output = ElementTree.tostring(device, 'utf-8')
         output = minidom.parseString(output)
         output = output.toprettyxml(indent="  ", encoding="utf-8")
 
         # write to file
         if file is None:
-            file = sys.stdout
-        file.write(str(output.decode("utf-8")))
-        file.close()
+            sys.stdout.write(str(output.decode("utf-8")))
+        else:
+            file.write(str(output.decode("utf-8")))
+            file.close()
 
 
-# - section helpers -----------------------------------------------------------
+    def _device(self, vendor, name, description):
+        device = Element("device")
 
-def _generate_section_device(soc: LunaSoC, vendor, name, description):
-    device = Element("device")
-    device.set("schemaVersion", "1.1")
-    device.set("xmlns:xs", "http://www.w3.org/2001/XMLSchema-instance")
-    device.set("xs:noNamespaceSchemaLocation", "CMSIS-SVD.xsd")
-    el = SubElement(device, "vendor")
-    el.text = vendor
-    el = SubElement(device, "name")
-    el.text = name.upper()
-    el = SubElement(device, "description")
-    if description is None:
-        el.text = "TODO device.description"
-    else:
-        el.text = description
-    el = SubElement(device, "addressUnitBits")
-    el.text = "8"          # TODO
-    el = SubElement(device, "width")
-    el.text = "32"         # TODO
-    el = SubElement(device, "size")
-    el.text = "32"         # TODO
-    el = SubElement(device, "access")
-    el.text = "read-write"
-    el = SubElement(device, "resetValue")
-    el.text = "0x00000000" # TODO
-    el = SubElement(device, "resetMask")
-    el.text = "0xFFFFFFFF" # TODO
+        device.set("schemaVersion", "1.1")
+        device.set("xmlns:xs", "http://www.w3.org/2001/XMLSchema-instance")
+        device.set("xs:noNamespaceSchemaLocation", "CMSIS-SVD.xsd")
 
-    return device
+        el = SubElement(device, "vendor")
+        el.text = vendor
+        el = SubElement(device, "name")
+        el.text = name.upper()
+        el = SubElement(device, "description")
+        el.text = description or "TODO device.description"
+
+        el = SubElement(device, "addressUnitBits")
+        el.text = "8"          # TODO
+        el = SubElement(device, "width")
+        el.text = "32"         # TODO
+        el = SubElement(device, "size")
+        el.text = "32"         # TODO
+        el = SubElement(device, "access")
+        el.text = "read-write"
+        el = SubElement(device, "resetValue")
+        el.text = "0x00000000" # TODO
+        el = SubElement(device, "resetMask")
+        el.text = "0xFFFFFFFF" # TODO
+
+        return device
 
 
-def _generate_section_peripheral(peripherals: Element, soc, window: MemoryMap, start, stop, ratio):
-    peripheral = SubElement(peripherals, "peripheral")
-    el = SubElement(peripheral, "name")
-    el.text = window.name.upper()
-    el = SubElement(peripheral, "groupName")
-    el.text = window.name.upper()
-    el = SubElement(peripheral, "baseAddress")
-    el.text = "0x{:08x}".format(start)
+    def _peripheral(self, root, name, start=0, end=0, groupName=None):
+        peripheral = SubElement(root, "peripheral")
 
-    addressBlock = SubElement(peripheral, "addressBlock")
-    el = SubElement(addressBlock, "offset")
-    el.text = "0" # TODO
-    el = SubElement(addressBlock, "size")     # TODO
-    el.text = "0x{:02x}".format(stop - start) # TODO
-    el = SubElement(addressBlock, "usage")
-    el.text = "registers" # TODO
+        el = SubElement(peripheral, "name")
+        el.text = name
+        el = SubElement(peripheral, "groupName")
+        el.text = groupName or ""
+        el = SubElement(peripheral, "baseAddress")
+        el.text = "0x{:08x}".format(start)
 
-    target_irqno, target_peripheral = soc.irq_for_peripheral_window(window)
-    if target_peripheral is not None:
-        interrupt = SubElement(peripheral, "interrupt")
-        el = SubElement(interrupt, "name")
-        el.text = target_peripheral.name
-        el = SubElement(interrupt, "value")
-        el.text = str(target_irqno)
+        addressBlock = SubElement(peripheral, "addressBlock")
+        el = SubElement(addressBlock, "offset")
+        el.text = "0" # TODO
+        el = SubElement(addressBlock, "size")     # TODO
+        el.text = "0x{:02x}".format(end - start) # TODO
+        el = SubElement(addressBlock, "usage")
+        el.text = "registers"
 
-    return peripheral
+        # interrupts
+        # TODO search by start, end rather than name
+        for v, (n, p) in self.interrupts.items():
+            if name == n:
+                interrupt = SubElement(peripheral, "interrupt")
+                el = SubElement(interrupt, "name")
+                el.text = n
+                el = SubElement(interrupt, "value")
+                el.text = str(v)
+                break
 
+        return peripheral
 
-def _generate_section_register(registers: Element, window: MemoryMap, resource_info: ResourceInfo):
-    resource: amaranth_soc.csr.bus.Element = resource_info.resource
-    assert type(resource) == amaranth_soc.csr.bus.Element
-    from ..gateware.vendor.amaranth_soc.csr.bus import Element
+    def _register(self, root, name, start, end, access=None, description=None):
+        register = SubElement(root, "register")
 
-    register = SubElement(registers, "register")
-    el = SubElement(register, "name")
-    el.text = "_".join(resource_info.name)
-    el = SubElement(register, "description")
-    if hasattr(resource_info, "desc"):
-        description = resource_info.desc
-    else:
-        description = "{} {} register".format(
-            window.name,
-            "_".join(resource_info.name),
-        )
-    el.text = description
-    el = SubElement(register, "addressOffset")
-    el.text = "0x{:04x}".format(resource_info.start)
-    el = SubElement(register, "size")
-    el.text = "{:d}".format((resource_info.end - resource_info.start) * 8) # TODO
-    el = SubElement(register, "resetValue")
-    el.text = "0x00" # TODO - calculate from fields ?
+        el = SubElement(register, "name")
+        el.text = name
+        el = SubElement(register, "description")
+        el.text = description or f"{name} register"
 
-    el = SubElement(register, "access")
-    access: Element.Access = resource.access
-    access = "read-only" if access is Element.Access.R  else "write-only" if access is Element.Access.W else "read-write"
-    el.text = access
+        el = SubElement(register, "addressOffset")
+        el.text = "0x{:04x}".format(start)
+        el = SubElement(register, "size")
+        el.text = "{:d}".format((end - start) * 8) # TODO
+        el = SubElement(register, "resetValue")
+        el.text = "0x00" # TODO - calculate from fields ?
+
+        if access is not None:
+            el = SubElement(register, "access")
+            el.text = access
+
+        return register
 
 
-    return register
+    def _field(self, root, name, bitOffset, bitWidth, access=None, description=None):
+        field =  SubElement(root, "field")
+
+        el = SubElement(field, "name")
+        el.text = name
+        el = SubElement(field, "description")
+        el.text = description or f"{name} field"
+
+        el = SubElement(field, "bitOffset")
+        el.text = "{:d}".format(bitOffset)
+        el = SubElement(field, "bitWidth")
+        el.text = "{:d}".format(bitWidth)
+        el = SubElement(field, "bitRange")
+        el.text = "[{:d}:{:d}]".format(bitOffset + bitWidth - 1, bitOffset)
+
+        if access is not None:
+            el = SubElement(field, "access")
+            el.text = access
+
+        return field
 
 
-def _generate_section_field(fields: Element, window: MemoryMap, resource_info: ResourceInfo):
-    resource: amaranth_soc.csr.bus.Element = resource_info.resource
-    assert type(resource) == amaranth_soc.csr.bus.Element
-
-    logging.debug("Generating register field for window: {} resource_info: {}  resource: {} width: {}".format(
-        window.name,
-        resource_info.name,
-        resource_info.resource.name,
-        resource_info.resource.width
-    ))
-
-    field =  SubElement(fields, "field")
-    el = SubElement(field, "name")
-    el.text = resource.name
-    el = SubElement(field, "description")
-    if hasattr(resource, "desc"):
-        description = resource.desc
-    else:
-        description = "{} {} register field".format(
-            window.name,
-            resource.name,
-        )
-    el.text = description
-    el = SubElement(field, "bitRange")
-    el.text = "[{:d}:0]".format(resource.width - 1)
-
-    return field
+    def _vendorExtensions(self):
+        pass
