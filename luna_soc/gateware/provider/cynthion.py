@@ -68,6 +68,9 @@ class UARTProvider(Component):
             self.pins.rx .eq(uart.rx.i),
             uart.tx.o    .eq(self.pins.tx),
         ]
+        if hasattr(uart.tx, "oe"):
+            m.d.comb += uart.tx.oe.eq(1),
+
         return m
 
 
@@ -135,10 +138,10 @@ class QSPIFlashProvider(Component):
         m = Module()
         qspi = platform.request(self.id, self.index)
         m.d.comb += [
+            self.pins.dq.i.eq(qspi.dq.i),
             qspi.dq.oe.eq(self.pins.dq.oe),
             qspi.dq.o.eq(self.pins.dq.o),
             qspi.cs.o.eq(self.pins.cs.o),
-            self.pins.dq.i.eq(qspi.dq.i),
         ]
         return m
 
