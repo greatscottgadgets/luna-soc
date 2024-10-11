@@ -6,16 +6,16 @@
 
 """Generate programming support files from SoC designs."""
 
-from .genc   import GenC
-from .gensvd import GenSVD
-from .genrust import GenRust
+#from .c   import GenerateC
+from .svd import GenerateSVD
+#from .rust import GenerateRust
 
-from ..gateware.lunasoc import LunaSoC
+#from ..gateware.lunasoc import LunaSoC
 
 
 class Generate:
     # TODO add params: vendor, design_name, description, build_dir
-    def __init__(self, soc: LunaSoC):
+    def __init__(self, soc):#: LunaSoC):
         self._soc = soc
 
 
@@ -31,7 +31,8 @@ class Generate:
                          function. This can be used to generate file content instead of printing to the terminal.
         """
 
-        GenC(self._soc).generate_c_header(macro_name, file=file, platform_name=platform_name)
+        pass
+        # TODO GenC(self._soc).generate_c_header(macro_name, file=file, platform_name=platform_name)
 
 
     def ld_script(self, file=None):
@@ -42,7 +43,8 @@ class Generate:
                          function. This can be used to generate file content instead of printing to the terminal.
         """
 
-        GenC(self._soc).generate_ld_script(file=file)
+        pass
+        # TODO GenC(self._soc).generate_ld_script(file=file)
 
 
     # - integration.gensvd --
@@ -55,7 +57,8 @@ class Generate:
                          function. This can be used to generate file content instead of printing to the terminal.
         """
 
-        GenSVD(self._soc).generate_svd(file=file)
+        pass
+        # TODO GenSVD(self._soc).generate_svd(file=file)
 
 
     # - integration.genrust --
@@ -67,5 +70,5 @@ class Generate:
             file       :  Optional. If provided, this will be treated as the file= argument to the print()
                           function. This can be used to generate file content instead of printing to the terminal.
         """
-
-        GenRust(self._soc).generate_memory_x(file=file)
+        pass
+        # TODO GenRust(self._soc).generate_memory_x(file=file)
