@@ -5,4 +5,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from .generate   import Generate
-from .introspect import Introspect
+#from .introspect import Introspect
