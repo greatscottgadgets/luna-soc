@@ -64,12 +64,13 @@ class UARTProvider(Component):
     def elaborate(self, platform):
         m = Module()
         uart = platform.request(self.id, self.index)
+        # TODO use connect()
         m.d.comb += [
             self.pins.rx .eq(uart.rx.i),
-            uart.tx.o    .eq(self.pins.tx),
+            uart.tx.o    .eq(self.pins.tx.o),
         ]
         if hasattr(uart.tx, "oe"):
-            m.d.comb += uart.tx.oe.eq(1),
+            m.d.comb += uart.tx.oe.eq(self.pins.tx.oe),
 
         return m
 
@@ -166,7 +167,7 @@ class ApolloAdvertiserProvider(Component):
             logging.warning(f"Platform does not support ApolloAdvertiserPeripheral {self.id} {self.index}")
             return m
         m.d.comb += [
-            int_pin.o.eq(self.pins.o)
+            int_pin.o.eq(self.pins.o),
         ]
         return m
 
