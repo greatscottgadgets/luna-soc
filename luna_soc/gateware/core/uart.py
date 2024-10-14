@@ -21,7 +21,12 @@ class PinSignature(wiring.Signature):
     """
     def __init__(self):
         super().__init__({
-            "tx":  Out(unsigned(1)),
+            "tx":  Out(
+                wiring.Signature({
+                    "o"  : Out(unsigned(1)),
+                    "oe" : Out(unsigned(1)),
+                })
+            ),
             "rx":  In(unsigned(1)),
         })
 
@@ -82,7 +87,8 @@ class Peripheral(wiring.Component):
 
         m.submodules.tx = tx = AsyncSerialTX(divisor=self._init_divisor, divisor_bits=24)
         m.d.comb += [
-            self.pins.tx.eq(tx.o),
+            self.pins.tx.oe.eq(~self._tx_ready.f.txe.r_data),
+            self.pins.tx.o.eq(tx.o),
             tx.data.eq(self._tx_data.f.data.w_data),
             tx.ack.eq(self._tx_data.f.data.w_stb),
             self._tx_ready.f.txe.r_data.eq(tx.rdy),
