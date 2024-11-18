@@ -1,4 +1,4 @@
-# LUNA-SOC: Amaranth HDL libary for building USB-capable SoC designs
+# LUNA-SOC: Amaranth HDL library for building USB-capable SoC designs
 
 ## LUNA-SOC Library
 
