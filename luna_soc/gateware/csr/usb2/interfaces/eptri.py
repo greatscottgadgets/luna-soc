@@ -548,6 +548,10 @@ class OutFIFOInterface(Peripheral, Elaboratable):
             that `enable` controls receiving on _any_ of the primed endpoints; while `prime` can be used to build
             a collection of endpoints willing to participate in receipt.
 
+            Note that this does not apply to the control endpoint. Once the control endpoint has received
+            a packet it will be un-primed and need to be re-primed before it can receive again. This is to
+            ensure that we can establish an order on the receipt of the setup packet and any associated data.
+
             Only one transaction / data packet is captured per `enable` write; repeated enabling is necessary
             to capture multiple packets.
         """)
@@ -642,6 +646,11 @@ class OutFIFOInterface(Peripheral, Elaboratable):
                 self.enable.r_data                .eq(0),
                 fifo_ready                        .eq(0),
             ]
+            # If we've ACK'd a receive on the control endpoint, un-prime it to
+            # ensure we only receive control data _after_ we've had an opportunity
+            # to receive the setup packet.
+            with m.If(token.endpoint == 0):
+                m.d.usb += endpoint_primed[token.endpoint].eq(0)
 
         # Mark our FIFO as ready iff it is enabled and primed on receipt of a new token.
         with m.If(token.new_token & self.enable.r_data & endpoint_primed[token.endpoint]):
