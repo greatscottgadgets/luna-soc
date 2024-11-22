@@ -528,8 +528,9 @@ class OutFIFOInterface(Peripheral, Elaboratable):
         """)
 
         self.epno = regs.csr(4, "rw", desc="""
-            Selects the endpoint number to prime. This interface only allows priming a single endpoint at once--
-            that is, only one endpoint can be ready to receive data at a time. See the `enable` bit for usage.
+            Selects the endpoint number to prime. This interface allows priming multiple endpoints at once--
+            that is, multiple endpoints can be ready to receive data at a time. See the `prime` and `enable` bits
+            for usage.
         """)
 
         self.enable = regs.csr(1, "rw", desc="""
@@ -546,6 +547,10 @@ class OutFIFOInterface(Peripheral, Elaboratable):
             When a transaction is complete, the `enable` bit is reset; the `prime` is not. This effectively means
             that `enable` controls receiving on _any_ of the primed endpoints; while `prime` can be used to build
             a collection of endpoints willing to participate in receipt.
+
+            Note that this does not apply to the control endpoint. Once the control endpoint has received
+            a packet it will be un-primed and need to be re-primed before it can receive again. This is to
+            ensure that we can establish an order on the receipt of the setup packet and any associated data.
 
             Only one transaction / data packet is captured per `enable` write; repeated enabling is necessary
             to capture multiple packets.
@@ -634,14 +639,18 @@ class OutFIFOInterface(Peripheral, Elaboratable):
         with m.If(self.prime.w_stb):
             m.d.usb += endpoint_primed[self.epno.r_data].eq(self.prime.w_data)
 
-        # If we've just ACK'd a receive, clear our enable, un-prime the given endpoint and
+        # If we've just ACK'd a receive, clear our enable and
         # clear our FIFO's ready state.
         with m.If(interface.handshakes_out.ack & token.is_out):
             m.d.usb += [
                 self.enable.r_data                .eq(0),
-                endpoint_primed[token.endpoint]   .eq(0),
                 fifo_ready                        .eq(0),
             ]
+            # If we've ACK'd a receive on the control endpoint, un-prime it to
+            # ensure we only receive control data _after_ we've had an opportunity
+            # to receive the setup packet.
+            with m.If(token.endpoint == 0):
+                m.d.usb += endpoint_primed[token.endpoint].eq(0)
 
         # Mark our FIFO as ready iff it is enabled and primed on receipt of a new token.
         with m.If(token.new_token & self.enable.r_data & endpoint_primed[token.endpoint]):
@@ -676,16 +685,16 @@ class OutFIFOInterface(Peripheral, Elaboratable):
         #  - We've primed the relevant endpoint.
         #  - Our most recent token is an OUT.
         #  - We're not stalled.
-        stalled          = token.is_out & endpoint_stalled[token.endpoint]
-        endpoint_primed  = endpoint_primed[token.endpoint]
-        ready_to_receive = fifo_ready & endpoint_primed & self.enable.r_data & ~stalled
-        allow_receive    = token.is_out & ready_to_receive
-        nak_receives     = token.is_out & ~ready_to_receive & ~stalled
+        stalled            = token.is_out & endpoint_stalled[token.endpoint]
+        is_endpoint_primed = endpoint_primed[token.endpoint]
+        ready_to_receive   = fifo_ready & is_endpoint_primed & self.enable.r_data & ~stalled
+        allow_receive      = token.is_out & ready_to_receive
+        nak_receives       = token.is_out & ~ready_to_receive & ~stalled
 
         # Shortcut for when we have a "redundant"/incorrect PID. In these cases, we'll assume
         # the host missed our ACK, and per the USB spec, implicitly ACK the packet.
         is_redundant_pid    = (interface.rx_pid_toggle != endpoint_data_pid[token.endpoint])
-        is_redundant_packet = endpoint_primed & token.is_out & is_redundant_pid
+        is_redundant_packet = is_endpoint_primed & token.is_out & is_redundant_pid
 
         # Shortcut conditions under which we'll ACK and NAK a receive.
         ack_redundant_packet = (is_redundant_packet & interface.rx_ready_for_response)
