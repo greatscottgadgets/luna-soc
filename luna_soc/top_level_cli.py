@@ -9,7 +9,7 @@ from amaranth               import Elaboratable
 from amaranth._unused       import MustUse
 
 from luna                   import configure_default_logging
-from luna.gateware.platform import get_appropriate_platform
+from luna.gateware.platform import get_appropriate_platform, configure_toolchain
 
 from luna_soc.generate      import Generate, Introspect
 
@@ -198,9 +198,15 @@ def _build_pre(args, fragment, platform, build_dir):
 def _build_gateware(args, fragment, platform, build_dir):
     """ Build gateware for the design."""
 
+    # Configure toolchain.
+    if not configure_toolchain(platform):
+        logging.info(f"Failed to configure the toolchain for: {platform.toolchain}")
+        logging.info(f"Continuing anyway.")
+
     # Now that we're actually building, re-enable Unused warnings.
     MustUse._MustUse__silence = False
 
+    # Perform the build.
     products = platform.build(
         fragment,
         do_program=args.upload,
