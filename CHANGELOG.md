@@ -9,14 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.2.2] - 2024-12-19
+### Added
+- Support for yowasp when yosys is unavailable.
+
+
+## [0.2.1] - 2024-11-25
+### Fixed
+- Fix ambiguous documentation and implementation for usb2.interfaces.eptri.OutFIFOInterface priming behaviour.
+### Changed
+- Non-control endpoints for eptri OutFIFOInterface are no longer unprimed after receiving a data packet.
+
+
 ## [0.2.0] - 2024-07-05
 ### Changed
 - Replaced `WishboneSPIFlashReader` with `SPIFlashPeripheral`
+
 
 ## [0.1.0] - 2024-06-12
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.1.0...HEAD
+
+[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.2...HEAD
+[0.2.2]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.1...0.2.2
+[0.2.1]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/greatscottgadgets/luna-soc/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/greatscottgadgets/luna-soc/releases/tag/0.1.0
