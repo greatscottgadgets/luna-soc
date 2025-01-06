@@ -11,7 +11,7 @@ from amaranth._unused       import MustUse
 from luna                   import configure_default_logging
 from luna.gateware.platform import get_appropriate_platform, configure_toolchain
 
-from luna_soc.generate      import Generate, Introspect
+#from luna_soc.generate      import Generate, Introspect
 
 
 def top_level_cli(fragment, *pos_args, **kwargs):
@@ -127,7 +127,9 @@ def top_level_cli(fragment, *pos_args, **kwargs):
     # If we've been asked to generate a SVD description of the design, generate -only- that.
     if args.generate_svd:
         logging.info("Generating SVD description for SoC")
-        Generate(fragment.soc).svd(file=None)
+        #Generate(fragment.soc).svd(file=None)
+        from luna_soc.generate.svd import GenerateSVD
+        GenerateSVD(fragment).generate(file=None)
         sys.exit(0)
 
     # If we've been asked for the address firmware should be loaded, generate _only_ that.

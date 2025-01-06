@@ -91,9 +91,9 @@ class Peripheral(wiring.Component):
     class Reset(csr.Register, access="w"):
         """ Reset register
 
-            high: A write to this field Clears the FIFO without transmitting.
+            fifo: A write to this field Clears the FIFO without transmitting.
         """
-        high : csr.Field(csr.action.W,       unsigned(1)) # FIXME do not like name
+        fifo : csr.Field(csr.action.W,       unsigned(1)) # FIXME do not like name
         _1   : csr.Field(csr.action.ResRAW0, unsigned(7))
 
     class Data(csr.Register, access="w"):
@@ -168,7 +168,7 @@ class Peripheral(wiring.Component):
         #
 
         # Create our FIFO; and set it to be cleared whenever the user requests.
-        m.submodules.fifo = fifo = ResetInserter(self._reset.f.high.w_stb)(
+        m.submodules.fifo = fifo = ResetInserter(self._reset.f.fifo.w_stb)(
             SyncFIFOBuffered(width=8, depth=self._max_packet_size)
         )
 
@@ -182,7 +182,7 @@ class Peripheral(wiring.Component):
         bytes_in_fifo = Signal(range(0, self._max_packet_size + 1))
 
         # If we're clearing the whole FIFO, reset our data count.
-        with m.If(self._reset.f.high.w_stb):
+        with m.If(self._reset.f.fifo.w_stb):
             m.d.usb += bytes_in_fifo.eq(0)
 
         # Keep track of our FIFO's data count as data is added or removed.
@@ -213,7 +213,7 @@ class Peripheral(wiring.Component):
         endpoint_nakked  = Array(Signal() for _ in range(16))
 
         # Clear our system state on reset.
-        with m.If(self._reset.f.high.w_stb):
+        with m.If(self._reset.f.fifo.w_stb):
             for i in range(16):
                 m.d.usb += [
                     endpoint_stalled[i]   .eq(0),
@@ -304,7 +304,7 @@ class Peripheral(wiring.Component):
                     m.next = "PRIMED"
 
                 # Always return to IDLE on reset.
-                with m.If(self._reset.f.high.w_stb):
+                with m.If(self._reset.f.fifo.w_stb):
                     m.next = "IDLE"
 
             # PRIMED -- our CPU has provided data, but we haven't been sent an IN token, yet.
@@ -334,7 +334,7 @@ class Peripheral(wiring.Component):
                         m.d.comb += handshakes_out.nak.eq(1)
 
                 # Always return to IDLE on reset.
-                with m.If(self._reset.f.high.w_stb):
+                with m.If(self._reset.f.fifo.w_stb):
                     m.next = "IDLE"
 
             # SEND_ZLP -- we're now now ready to respond to an IN token with a ZLP.
@@ -375,7 +375,7 @@ class Peripheral(wiring.Component):
                     m.next = 'IDLE'
 
                 # Always return to IDLE on reset.
-                with m.If(self._reset.f.high.w_stb):
+                with m.If(self._reset.f.fifo.w_stb):
                     m.next = "IDLE"
 
 
