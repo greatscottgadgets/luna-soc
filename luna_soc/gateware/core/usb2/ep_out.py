@@ -45,9 +45,9 @@ class Peripheral(wiring.Component):
     class Endpoint(csr.Register, access="rw"):
         """ Endpoint register
 
-            number: Selects the endpoint number to prime. This interface only allows priming a single endpoint
-                    at once -- that is, only one endpoint can be ready to receive data at a time. See the
-                    `enable` bit for usage.
+            number: Selects the endpoint number to prime. This interface allows priming multiple endpoints
+            at once. That is, multiple endpoints can be ready to receive data at a time. See the `prime`
+            and `enable` bits for usage.
         """
         number : csr.Field(csr.action.RW,      unsigned(4)) # desc="" ? # FIXME  get around doubling RW registers?
         _0     : csr.Field(csr.action.ResRAW0, unsigned(4))
@@ -115,9 +115,9 @@ class Peripheral(wiring.Component):
     class Reset(csr.Register, access="w"):
         """ Reset register
 
-            high: Local reset for the OUT handler; clears the out FIFO.
+            fifo: Local reset for the OUT handler; clears the out FIFO.
         """
-        high : csr.Field(csr.action.W,       unsigned(1))
+        fifo : csr.Field(csr.action.W,       unsigned(1))
         _0   : csr.Field(csr.action.ResRAW0, unsigned(7))
 
     class Data(csr.Register, access="r"):
@@ -218,12 +218,11 @@ class Peripheral(wiring.Component):
         with m.If(self._prime.f.primed.w_stb):
             m.d.usb += endpoint_primed[self._endpoint.f.number.data].eq(self._prime.f.primed.w_data)
 
-        # If we've just ACK'd a receive, clear our enable, un-prime the given endpoint and
+        # If we've just ACK'd a receive, clear our enable and
         # clear our FIFO's ready state.
         with m.If(interface.handshakes_out.ack & token.is_out):
             m.d.usb += [
                 enabled                          .eq(0),
-                endpoint_primed[token.endpoint]  .eq(0),
                 fifo_ready                       .eq(0),
             ]
 
@@ -251,7 +250,7 @@ class Peripheral(wiring.Component):
         #
         # Core FIFO.
         #
-        m.submodules.fifo = fifo = ResetInserter(self._reset.f.high.w_stb)(
+        m.submodules.fifo = fifo = ResetInserter(self._reset.f.fifo.w_stb)(
             SyncFIFOBuffered(width=8, depth=self._max_packet_size)
         )
 
@@ -260,16 +259,16 @@ class Peripheral(wiring.Component):
         #  - We've primed the relevant endpoint.
         #  - Our most recent token is an OUT.
         #  - We're not stalled.
-        stalled          = token.is_out & endpoint_stalled[token.endpoint]
-        endpoint_primed  = endpoint_primed[token.endpoint]
-        ready_to_receive = fifo_ready & endpoint_primed & enabled & ~stalled
-        allow_receive    = token.is_out & ready_to_receive
-        nak_receives     = token.is_out & ~ready_to_receive & ~stalled
+        stalled            = token.is_out & endpoint_stalled[token.endpoint]
+        is_endpoint_primed = endpoint_primed[token.endpoint]
+        ready_to_receive   = fifo_ready & is_endpoint_primed & enabled & ~stalled
+        allow_receive      = token.is_out & ready_to_receive
+        nak_receives       = token.is_out & ~ready_to_receive & ~stalled
 
         # Shortcut for when we have a "redundant"/incorrect PID. In these cases, we'll assume
         # the host missed our ACK, and per the USB spec, implicitly ACK the packet.
         is_redundant_pid    = (interface.rx_pid_toggle != endpoint_data_pid[token.endpoint])
-        is_redundant_packet = endpoint_primed & token.is_out & is_redundant_pid
+        is_redundant_packet = is_endpoint_primed & token.is_out & is_redundant_pid
 
         # Shortcut conditions under which we'll ACK and NAK a receive.
         ack_redundant_packet = (is_redundant_packet & interface.rx_ready_for_response)
@@ -324,7 +323,7 @@ class Peripheral(wiring.Component):
 
         # debug
         m.d.comb += [
-            self.debug[3]  .eq(endpoint_primed),
+            self.debug[3]  .eq(is_endpoint_primed),
             self.debug[4]  .eq(enabled),
             #self.debug[5]  .eq(token.is_out),
             #self.debug[5]  .eq(interface.rx_pid_toggle),

@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from collections import defaultdict
@@ -82,14 +83,14 @@ class GenerateSVD:
         # <peripherals />
         peripherals = SubElement(device, "peripherals")
         csr_base = self.csr_base
-        print(f"\ncsr_base: 0x{csr_base:08x}")
+        logging.debug(f"\ncsr_base: 0x{csr_base:08x}")
         for name, resource_infos in self.csr_peripherals.items():
             # so, in theory, these are always sorted so:
             pstart = resource_infos[0].start
             pend   = resource_infos[-1].end
 
             name = "_".join([str(s) for s in name]) if isinstance(name, tuple) else name[0]
-            print(f"  {name} 0x{pstart:04x} => 0x{pend:04x}  width: {pend - pstart} bytes")
+            logging.debug(f"  {name} 0x{pstart:04x} => 0x{pend:04x}  width: {pend - pstart} bytes")
             peripheral = self._peripheral(peripherals, name, pstart + csr_base, pend + csr_base)
 
             # <registers />
@@ -105,7 +106,7 @@ class GenerateSVD:
                 # description =  {resource.__class__.__doc__}")
                 description = "TODO amaranth_soc/csr/reg.py:471"
 
-                print(f"    {name}\t0x{rstart:02x} => 0x{rend:02x}  width: {rend - rstart} bytes")
+                logging.debug(f"    {name}\t0x{rstart:02x} => 0x{rend:02x}  width: {rend - rstart} bytes")
 
                 register = self._register(
                     registers,                     # root
@@ -129,7 +130,7 @@ class GenerateSVD:
 
                     bitRange = "[{:d}:{:d}]".format(offset + width - 1, offset)
 
-                    print(f"      {name}\toffset:0x{offset} width: {width} bits range: {bitRange}")
+                    logging.debug(f"      {name}\toffset:0x{offset} width: {width} bits range: {bitRange}")
 
                     field = self._field(
                         fields,                 # root
@@ -142,11 +143,11 @@ class GenerateSVD:
 
                     offset += width
 
-        print("\nwishbone peripherals:")
+        logging.debug("\nwishbone peripherals:")
         for name, t in self.wb_peripherals.items():
-            print(f"\t{name} => {t}")
+            logging.debug(f"\t{name} => {t}")
 
-        print("\n---------------\n")
+        logging.debug("\n---------------\n")
 
         # generate output
         output = ElementTree.tostring(device, 'utf-8')

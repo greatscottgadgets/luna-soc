@@ -61,10 +61,10 @@ class Peripheral(wiring.Component):
     class Reset(csr.Register, access="w"):
         """ Reset register
 
-            high: Local reset control for the SETUP handler; writing a '1' to this register clears
+            fifo: Local reset control for the SETUP handler; writing a '1' to this register clears
                   the handler state.
         """
-        high    : csr.Field(csr.action.W,       unsigned(1))
+        fifo    : csr.Field(csr.action.W,       unsigned(1))
         _0      : csr.Field(csr.action.ResRAW0, unsigned(7))
 
     class Data(csr.Register, access="r"):
@@ -125,7 +125,7 @@ class Peripheral(wiring.Component):
 
         # Logic condition for getting a new setup packet.
         new_setup       = token.new_token & token.is_setup
-        reset_requested = self._reset.f.high.w_stb & self._reset.f.high.w_data
+        reset_requested = self._reset.f.fifo.w_stb & self._reset.f.fifo.w_data
         clear_fifo      = new_setup | reset_requested
 
         #
@@ -180,8 +180,8 @@ class Peripheral(wiring.Component):
             self.debug[0]  .eq(token.new_token),
             self.debug[1]  .eq(token.is_setup),
 
-            self.debug[2]  .eq(self._reset.f.high.w_stb),
-            self.debug[3]  .eq(self._reset.f.high.w_data),
+            self.debug[2]  .eq(self._reset.f.fifo.w_stb),
+            self.debug[3]  .eq(self._reset.f.fifo.w_data),
             self.debug[4]  .eq(reset_requested),
 
             self.debug[5]  .eq(self._control.f.address.w_stb),
