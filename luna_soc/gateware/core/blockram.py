@@ -22,13 +22,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from amaranth import *
-from amaranth.lib import wiring, memory
-from amaranth.lib.wiring import In
-from amaranth.utils import exact_log2
+from amaranth             import *
+from amaranth.lib         import wiring, memory
+from amaranth.lib.wiring  import In
+from amaranth.utils       import exact_log2
 
-from amaranth_soc import wishbone
-from amaranth_soc.memory import MemoryMap
+from amaranth_soc         import wishbone
+from amaranth_soc.memory  import MemoryMap
 
 __all__ = ["SRAMPeripheralNew"]
 

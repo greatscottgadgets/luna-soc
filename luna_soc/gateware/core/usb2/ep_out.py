@@ -11,15 +11,15 @@ Equivalent (but not binary-compatbile) implementation of ValentyUSB's ``eptri``.
 For an example, see ``examples/usb/eptri`` or TinyUSB's ``luna/dcd_eptri.c``.
 """
 
-from amaranth             import *
-from amaranth.hdl.xfrm    import ResetInserter, DomainRenamer
-from amaranth.lib         import wiring
-from amaranth.lib.fifo    import SyncFIFOBuffered
-from amaranth.lib.wiring  import In, Out, connect, flipped
+from amaranth                         import *
+from amaranth.hdl.xfrm                import ResetInserter, DomainRenamer
+from amaranth.lib                     import wiring
+from amaranth.lib.fifo                import SyncFIFOBuffered
+from amaranth.lib.wiring              import In, Out, connect, flipped
 
-from amaranth_soc         import csr, event
+from amaranth_soc           import csr, event
 
-from luna.gateware.usb.usb2.endpoint import EndpointInterface
+from luna.gateware.usb.usb2.endpoint  import EndpointInterface
 
 
 class Peripheral(wiring.Component):

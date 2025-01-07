@@ -1,14 +1,14 @@
 from amaranth                import Elaboratable, Module
 
-from .vendor.amaranth_soc            import wishbone
-from .vendor.amaranth_soc.memory     import MemoryMap
-from .vendor.amaranth_soc.periph     import ConstantMap
+from amaranth_soc            import wishbone
+from amaranth_soc.memory     import MemoryMap
+from amaranth_soc.periph     import ConstantMap
 
-from .vendor.amaranth_stdio.serial   import AsyncSerial
+from amaranth_stdio.serial   import AsyncSerial
 
-from .vendor.lambdasoc.periph.intc   import GenericInterruptController
-from .vendor.lambdasoc.periph.serial import AsyncSerialPeripheral
-from .vendor.lambdasoc.periph.timer  import TimerPeripheral
+#from lambdasoc.periph.intc   import GenericInterruptController
+#from lambdasoc.periph.serial import AsyncSerialPeripheral
+#from lambdasoc.periph.timer  import TimerPeripheral
 
 from .csr.base         import Peripheral
 from .wishbone         import SRAMPeripheral, WishboneRAM, WishboneROM

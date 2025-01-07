@@ -17,14 +17,14 @@ from amaranth                           import Module, Elaboratable
 from amaranth                           import tracer
 from amaranth.utils                     import log2_int
 
-from ..vendor.amaranth_soc              import csr, wishbone
-from ..vendor.amaranth_soc.memory       import MemoryMap
-from ..vendor.amaranth_soc.csr.wishbone import WishboneCSRBridge
+from amaranth_soc              import csr, wishbone
+from amaranth_soc.memory       import MemoryMap
+from amaranth_soc.csr.wishbone import WishboneCSRBridge
 
-from ..vendor.lambdasoc.periph.base     import PeripheralBridge
-from ..vendor.lambdasoc.periph.base     import Peripheral as PeripheralBase
-from ..vendor.lambdasoc.periph.base     import CSRBank    as CSRBankBase
-from ..vendor.lambdasoc.periph.event    import EventSource
+from lambdasoc.periph.base     import PeripheralBridge
+from lambdasoc.periph.base     import Peripheral as PeripheralBase
+from lambdasoc.periph.base     import CSRBank    as CSRBankBase
+from lambdasoc.periph.event    import EventSource
 
 __all__ = ["Peripheral", "CSRBank", "EventSource", "PeripheralBridge"]
 

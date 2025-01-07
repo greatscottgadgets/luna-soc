@@ -6,13 +6,13 @@
 
 import math
 
-from enum      import Enum
-from functools import reduce
-from operator  import or_
+from enum          import Enum
+from functools     import reduce
+from operator      import or_
 
-from amaranth     import Elaboratable, Record, Module, Cat, Array, Repl, Signal, Memory
+from amaranth      import Elaboratable, Record, Module, Cat, Array, Repl, Signal, Memory
 
-from ..vendor.amaranth_soc import wishbone, memory
+from amaranth_soc  import wishbone, memory
 
 
 class WishboneRAM(Elaboratable):

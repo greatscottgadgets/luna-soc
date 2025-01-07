@@ -10,6 +10,7 @@ import typing
 from amaranth             import *
 from amaranth.lib         import wiring
 from amaranth.lib.wiring  import Component, In, Out
+
 from amaranth_soc         import gpio
 
 from ..core               import uart, usb2, spiflash
