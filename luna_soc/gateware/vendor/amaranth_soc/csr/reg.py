@@ -455,7 +455,11 @@ class Register(wiring.Component):
     def __init_subclass__(cls, *, access=None, **kwargs):
         if access is not None:
             cls._access = Element.Access(access)
-            cls.__doc__ = cls._doc_template.format(parameters="")
+            # TODO this fix is to stop from overwriting my Register doc comments
+            #
+            # Only provide default documentation if there isn't existing docs.
+            if cls.__doc__ is None:
+                cls.__doc__ = cls._doc_template.format(parameters="")
         super().__init_subclass__(**kwargs)
 
     def __init__(self, fields=None, access=None):

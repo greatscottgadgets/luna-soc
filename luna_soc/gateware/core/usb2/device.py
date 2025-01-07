@@ -75,7 +75,6 @@ class Peripheral(wiring.Component):
 
         # events
         # TODO desc="Interrupt that occurs when a USB bus reset is received."
-        #self._reset = event.Source(path=("reset",)) # desc="" ?
         from typing import Annotated
         ResetSource = Annotated[event.Source, "Interrupt that occurs when a USB bus reset is received."]
         self._reset = ResetSource(path=("reset",))
