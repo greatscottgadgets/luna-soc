@@ -1,9 +1,9 @@
-from amaranth              import *
-from amaranth.lib          import wiring
-from amaranth.lib.wiring   import In, Out, flipped, connect
+from amaranth               import *
+from amaranth.lib           import wiring
+from amaranth.lib.wiring    import In, Out, flipped, connect
 
-from amaranth_soc          import csr
-from amaranth_stdio.serial import AsyncSerialRX, AsyncSerialTX
+from amaranth_soc           import csr
+from amaranth_stdio.serial  import AsyncSerialRX, AsyncSerialTX
 
 
 __all__ = ["PinSignature", "Peripheral"]

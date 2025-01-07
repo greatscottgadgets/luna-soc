@@ -4,14 +4,14 @@
 # Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
+import os
+import logging
+
 from amaranth             import *
 from amaranth.lib.wiring  import Component, In, Out
 
 from amaranth_soc         import wishbone
 from amaranth_soc.periph  import ConstantMap
-
-import os
-import logging
 
 # Variants --------------------------------------------------------------------
 

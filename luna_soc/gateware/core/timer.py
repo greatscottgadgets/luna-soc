@@ -1,8 +1,8 @@
-from amaranth              import *
-from amaranth.lib          import enum, wiring
-from amaranth.lib.wiring   import In, Out, flipped, connect
+from amaranth             import *
+from amaranth.lib         import enum, wiring
+from amaranth.lib.wiring  import In, Out, flipped, connect
 
-from amaranth_soc          import csr, event
+from amaranth_soc         import csr, event
 
 
 class Peripheral(wiring.Component):

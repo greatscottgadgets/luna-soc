@@ -6,15 +6,15 @@
 
 # Based on code from LiteSPI
 
-from amaranth                           import Module, DomainRenamer, Signal, unsigned
-from amaranth.lib                       import wiring
-from amaranth.lib.fifo                  import SyncFIFO
-from amaranth.lib.data                  import StructLayout, View
-from amaranth.lib.wiring                import In, Out, flipped, connect
+from amaranth             import Module, DomainRenamer, Signal, unsigned
+from amaranth.lib         import wiring
+from amaranth.lib.fifo    import SyncFIFO
+from amaranth.lib.data    import StructLayout, View
+from amaranth.lib.wiring  import In, Out, flipped, connect
 
-from amaranth_soc                       import csr
+from amaranth_soc         import csr
 
-from .port                              import SPIControlPort
+from .port                import SPIControlPort
 
 
 class SPIController(wiring.Component):
