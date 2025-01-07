@@ -103,8 +103,8 @@ class GenerateSVD:
                 access = "read-only"  if type(access) is csr.FieldPort.Access.R else \
                          "write-only" if type(access) is csr.FieldPort.Access.W else \
                          "read-write"
-                # description =  {resource.__class__.__doc__}")
-                description = "TODO amaranth_soc/csr/reg.py:471"
+                # TODO patch amaranth_soc/csr/reg.py:458 if not using vendored version
+                description =  resource_info.resource.__class__.__doc__
 
                 logging.debug(f"    {name}\t0x{rstart:02x} => 0x{rend:02x}  width: {rend - rstart} bytes")
 
@@ -126,7 +126,7 @@ class GenerateSVD:
                     access = "read-only"  if type(action) is csr.action.R else \
                              "write-only" if type(action) is csr.action.W else \
                              "read-write"
-                    description = "TODO amaranth_soc/csr/reg.py:471"
+                    description = "" # TODO
 
                     bitRange = "[{:d}:{:d}]".format(offset + width - 1, offset)
 
