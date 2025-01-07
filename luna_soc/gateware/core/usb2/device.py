@@ -11,13 +11,13 @@ to your own designs; including the core :class:`USBDevice` class.
 
 import logging
 
-from amaranth              import *
-from amaranth.lib          import wiring
-from amaranth.lib.wiring   import In, Out, connect, flipped
+from amaranth                       import *
+from amaranth.lib                   import wiring
+from amaranth.lib.wiring            import In, Out, connect, flipped
 
-from amaranth_soc          import csr, event
+from amaranth_soc         import csr, event
 
-from luna.gateware.usb.usb2.device import USBDevice
+from luna.gateware.usb.usb2.device  import USBDevice
 
 
 class Peripheral(wiring.Component):
@@ -75,7 +75,10 @@ class Peripheral(wiring.Component):
 
         # events
         # TODO desc="Interrupt that occurs when a USB bus reset is received."
-        self._reset = event.Source(path=("reset",)) # desc="" ?
+        #self._reset = event.Source(path=("reset",)) # desc="" ?
+        from typing import Annotated
+        ResetSource = Annotated[event.Source, "Interrupt that occurs when a USB bus reset is received."]
+        self._reset = ResetSource(path=("reset",))
         event_map = event.EventMap()
         event_map.add(self._reset)
         self._events = csr.event.EventMonitor(event_map, data_width=8) # TODO width=1 ?

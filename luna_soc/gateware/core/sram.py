@@ -4,19 +4,17 @@
 # Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth       import *
-from amaranth.utils import log2_int
+from amaranth             import *
+from amaranth.utils       import log2_int
 
-from ..vendor.amaranth_soc        import wishbone
-from ..vendor.amaranth_soc.memory import MemoryMap
-from ..vendor.amaranth_soc.periph import ConstantMap
-
-from ..vendor.lambdasoc.periph    import Peripheral
+from amaranth_soc         import wishbone
+from amaranth_soc.memory  import MemoryMap
+from amaranth_soc.periph  import ConstantMap
 
 
 __all__ = ["SRAMPeripheral"]
 
-# TODO this should live in wishbone/ !
+# TODO should we port this to amaranth 5?
 class SRAMPeripheral(Peripheral, Elaboratable):
     """SRAM storage peripheral.
 

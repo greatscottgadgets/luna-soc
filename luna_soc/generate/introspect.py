@@ -8,8 +8,6 @@
 
 import logging
 
-from ..gateware.vendor                   import amaranth_soc
-from ..gateware.vendor.lambdasoc.periph  import Peripheral
 from ..gateware.lunasoc                  import LunaSoC
 
 
