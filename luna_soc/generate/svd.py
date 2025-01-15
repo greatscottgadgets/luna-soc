@@ -10,70 +10,16 @@ from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 from amaranth_soc         import csr
 from amaranth_soc.memory  import MemoryMap, ResourceInfo
 
-class Introspect():
-    """Gather information about a design for sdk generation"""
-
-    def __init__(self, design, access="w"):
-        self.interrupts            = design.soc.interrupt_controller.interrupts
-        self.memory_map: MemoryMap = design.soc.wb_decoder.bus.memory_map
-
-    def csr_base(self):
-        window: MemoryMap
-        for window, name, (start, stop, step) in self.memory_map.windows():
-            if name[0] == "wb_to_csr":
-                return start
-
-    def csr_peripherals(self):
-        """Get all csr peripherals in design."""
-
-        # group registers by peripheral
-        csr_peripherals = defaultdict(list)
-
-        # scan memory map for peripheral registers
-        window: MemoryMap
-        for window, name, (start, stop, step) in self.memory_map.windows():
-            if name[0] != "wb_to_csr": # skip mainram and other wb's etc.
-                continue
-            # gather peripheral registers
-            resource_info: ResourceInfo
-            for resource_info in window.all_resources():
-                name     = resource_info.path[0]
-                resource = resource_info.resource
-                # append resource if it's a register
-                if issubclass(resource.__class__, csr.Register):
-                    csr_peripherals[name].append(resource_info)
-
-        return csr_peripherals
-
-
-    def wb_peripherals(self):
-        """Get all wb peripherals in design."""
-
-        # group by peripheral
-        wb_peripherals = defaultdict(list)
-
-        # scan memory map for wb peripherals
-        window: MemoryMap
-        for window, name, (start, stop, end) in self.memory_map.windows():
-            for resource, path, range in window.resources():
-                wb_peripherals[name].append((resource, path, range))
-
-        return wb_peripherals
-
-
-    def find_interrupt(self, name, start, end):
-        pass
-
+from . import introspect
 
 
 class GenerateSVD:
     def __init__(self, design):
-        introspect = Introspect(design)
-
-        self.csr_base        = introspect.csr_base()
-        self.csr_peripherals = introspect.csr_peripherals()
-        self.wb_peripherals  = introspect.wb_peripherals()
-        self.interrupts      = introspect.interrupts
+        memory_map = design.soc.wb_decoder.bus.memory_map
+        self.csr_base        = introspect._csr_base(memory_map)
+        self.csr_peripherals = introspect._csr_peripherals(memory_map)
+        self.wb_peripherals  = introspect._wb_peripherals(memory_map)
+        self.interrupts      = introspect._interrupts(design.soc)
 
 
     def generate(self, file=None, vendor="luna-soc", name="soc", description=None):
