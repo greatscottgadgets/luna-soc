@@ -46,15 +46,8 @@ class SPIFlashMemoryMap(wiring.Component):
         mm_addr_width  = log2_int(self._size)
         mm_data_width  = granularity
 
-        # self.bus = wishbone.Interface(
-        #     addr_width=wb_addr_width,
-        #     data_width=wb_data_width,
-        #     granularity=granularity,
-        # )
-
         map = MemoryMap(addr_width=mm_addr_width, data_width=mm_data_width)
-        map.add_resource(self, name=self._name, size=self._size)
-
+        map.add_resource(self, name=("memory", self._name), size=self._size)
 
         super().__init__({
             "bus" : In(wishbone.Signature(

@@ -8,7 +8,7 @@ class InterruptController(wiring.Component):
             "pending":  Out(unsigned(width)),
         })
 
-        self.interrupts = dict()
+        self.interrupts: dict[int, (str, wiring.Component)] = dict()
 
     # TODO add line or peripheral ?
     #
