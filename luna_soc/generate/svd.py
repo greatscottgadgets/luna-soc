@@ -1,35 +1,44 @@
+#
+# This file is part of LUNA.
+#
+# Copyright (c) 2023-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
+
+"""Generate a SVD file for SoC designs."""
+
 import logging
 import sys
 
-from collections import defaultdict
+from collections            import defaultdict
 
-from xml.dom import minidom
-from xml.etree import ElementTree
-from xml.etree.ElementTree import Element, SubElement, Comment, tostring
+from xml.dom                import minidom
+from xml.etree              import ElementTree
+from xml.etree.ElementTree  import Element, SubElement, Comment, tostring
 
-from amaranth_soc         import csr
-from amaranth_soc.memory  import MemoryMap, ResourceInfo
+from amaranth_soc           import csr
+from amaranth_soc.memory    import MemoryMap, ResourceInfo
 
-from . import introspect
+from ..gateware.cpu.ic      import InterruptMap
+from .                      import introspect
 
-
-class GenerateSVD:
-    def __init__(self, design):
-        memory_map = design.soc.wb_decoder.bus.memory_map
-        self.csr_base        = introspect._csr_base(memory_map)
-        self.csr_peripherals = introspect._csr_peripherals(memory_map)
-        self.wb_peripherals  = introspect._wb_peripherals(memory_map)
-        self.interrupts      = introspect._interrupts(design.soc)
+class SVDFile:
+    def __init__(self, memory_map: MemoryMap, interrupts: InterruptMap):
+        self.interrupts      = interrupts
+        self.csr_base        = introspect.csr_base(memory_map)
+        self.csr_peripherals = introspect.csr_peripherals(memory_map)
+        self.wb_peripherals  = introspect.wb_peripherals(memory_map)
 
 
     def generate(self, file=None, vendor="luna-soc", name="soc", description=None):
-
         device = self._device(vendor, name, description)
 
         # <peripherals />
         peripherals = SubElement(device, "peripherals")
         csr_base = self.csr_base
         logging.debug(f"\ncsr_base: 0x{csr_base:08x}")
+
+        name         : MemoryMap.Name
+        resource_info: ResourceInfo
         for name, resource_infos in self.csr_peripherals.items():
             # so, in theory, these are always sorted so:
             pstart = resource_infos[0].start

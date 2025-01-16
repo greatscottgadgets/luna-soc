@@ -1,25 +1,23 @@
 #
 # This file is part of LUNA.
 #
-# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2023-2025 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 """Generate Rust support files for SoC designs."""
 
-from .introspect import Introspect
-
-from ..gateware.lunasoc import LunaSoC
-
 import datetime
 import logging
 
-class GenRust:
-    def __init__(self, soc: LunaSoC):
-        self._soc = soc
+from amaranth_soc.memory import MemoryMap
 
-    # - memory.x generation ---------------------------------------------------
-    def generate_memory_x(self, file=None):
-        """ Generate a memory.x file for the given SoC"""
+class LinkerScript:
+    def __init__(self, memory_map: MemoryMap, reset_addr: int = 0x00000000):
+        self.memory_map = memory_map
+        self.reset_addr = reset_addr
+
+    def generate(self, file=None):
+        """ Generate a memory.x file for the given SoC design"""
 
         def emit(content):
             """ Utility function that emits a string to the targeted file. """
@@ -35,24 +33,28 @@ class GenRust:
         emit("")
 
         # TODO this should be determined by introspection
-        memories = ["bootrom", "scratchpad", "mainram", "ram", "rom", "spiflash"]
+        memories = ["ram", "rom", "blockram", "spiflash",
+                    "bootrom", "scratchpad", "mainram"]
 
         # memory regions
         regions = set()
         emit("MEMORY {")
-        for window, (start, stop, ratio) in self._soc.memory_map.windows():
-            if window.name not in memories:
-                logging.debug("Skipping non-memory resource: {}".format(window.name))
+        window: MemoryMap
+        name:   MemoryMap.Name
+        for window, name, (start, end, ratio) in self.memory_map.windows():
+            name = name[0]
+            if name not in memories:
+                logging.debug("Skipping non-memory resource: {}".format(name))
                 continue
-            emit(f"    {window.name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{stop-start:08x}")
-            regions.add(window.name)
+            if self.reset_addr >= start and self.reset_addr < end:
+                start = self.reset_addr
+            emit(f"    {name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{end-start:08x}")
+            regions.add(name)
         emit("}")
         emit("")
 
-        # TODO support an offset for spiflash
-
         # region aliases
-        ram = "mainram"  if "mainram"  in regions else "scratchpad"
+        ram = "blockram" if "blockram" in regions else "scratchpad"
         rom = "spiflash" if "spiflash" in regions else ram
         aliases = {
             "REGION_TEXT":   rom,
