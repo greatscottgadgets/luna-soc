@@ -11,8 +11,6 @@ from amaranth._unused       import MustUse
 from luna                   import configure_default_logging
 from luna.gateware.platform import get_appropriate_platform, configure_toolchain
 
-# TODO from luna_soc.generate      import Generate, Introspect
-
 
 def top_level_cli(fragment, *pos_args, **kwargs):
 
@@ -115,22 +113,44 @@ def top_level_cli(fragment, *pos_args, **kwargs):
     # If we've been asked to generate C linker region info, generate -only- that.
     if args.generate_ld_script:
         logging.info("Generating C linker region info script for SoC")
-        Generate(fragment.soc).ld_script(file=None)
+
+        from luna_soc.generate   import introspect
+        from luna_soc.generate.c import LinkerScript
+
+        soc        = introspect.soc(fragment)
+        memory_map = introspect.memory_map(soc)
+        interrupts = introspect.interrupts(soc)
+        reset_addr = introspect.reset_addr(soc)
+
+        LinkerScript(memory_map, interrupts, reset_addr).generate(file=None)
         sys.exit(0)
 
     # If we've been asked to generate Rust linker region info, generate -only- that.
     if args.generate_memory_x:
         logging.info("Generating Rust linker region info script for SoC")
-        Generate(fragment.soc).memory_x(file=None)
+
+        from luna_soc.generate      import introspect
+        from luna_soc.generate.rust import LinkerScript
+
+        soc        = introspect.soc(fragment)
+        memory_map = introspect.memory_map(soc)
+        reset_addr = introspect.reset_addr(soc)
+
+        LinkerScript(memory_map, reset_addr).generate(file=None)
         sys.exit(0)
 
     # If we've been asked to generate a SVD description of the design, generate -only- that.
     if args.generate_svd:
         logging.info("Generating SVD description for SoC")
-        from luna_soc.generate.svd import GenerateSVD
-        GenerateSVD(fragment).generate(file=None)
-        #from luna_soc.generate.introspect import introspect
-        #metadata = introspect(fragment.soc)
+
+        from luna_soc.generate     import introspect
+        from luna_soc.generate.svd import SVDFile
+
+        soc        = introspect.soc(fragment)
+        memory_map = introspect.memory_map(soc)
+        interrupts = introspect.interrupts(soc)
+
+        SVDFile(memory_map, interrupts).generate(file=None)
         sys.exit(0)
 
     # If we've been asked for the address firmware should be loaded, generate _only_ that.
