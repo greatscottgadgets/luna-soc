@@ -15,25 +15,61 @@ from amaranth.lib         import wiring
 from amaranth_soc         import csr
 from amaranth_soc.memory  import MemoryMap, ResourceInfo
 
-
-def introspect(design: wiring.Component):
-    memory_map: MemoryMap = design.wb_decoder.bus.memory_map
-
-    csr_base        = _csr_base(memory_map)
-    csr_peripherals = _csr_peripherals(memory_map)
-    wb_peripherals  = _wb_peripherals(memory_map)
-    interrupts      = _interrupts(design)
-
-    print(f"csr_base: 0x{csr_base:08x}")
+from ..gateware.cpu.ic    import InterruptMap
 
 
+# fragment
+#   interrupts
+#   memory_map
+#     csr
+#       base_addr
+#       peripherals
+#         registers
+#     wb
+#       peripherals
 
 
-def _interrupts(design: wiring.Component):
-    return design.interrupt_controller.interrupts
+# def introspect(fragment: wiring.Component) -> tuple[MemoryMap, dict[int, tuple[str, wiring.Component]]]:
+#     memory_map: MemoryMap = fragment.wb_decoder.bus.memory_map
+
+#     memory_map      = _memory_map(fragment)
+#     interrupts      = _interrupts(fragment)
+
+#     csr_base        = _csr_base(memory_map)
+#     csr_peripherals = _csr_peripherals(memory_map)
+#     wb_peripherals  = _wb_peripherals(memory_map)
+
+#     print(f"csr_base: 0x{csr_base:08x}")
+
+#     return memory_map, interrupts
 
 
-def _csr_base(memory_map: MemoryMap) -> int:
+# - soc attributes ------------------------------------------------------------
+
+def soc(fragment: wiring.Component) -> wiring.Component:
+    if hasattr(fragment, "soc"):
+        fragment = fragment.soc
+
+    if not hasattr(fragment, "wb_decoder"):
+        logging.warning("SoC designs need to have a 'wb_decoder' attribute.")
+    if not hasattr(fragment, "interrupt_controller"):
+        logging.warning("SoC designs need to have an 'interrupt_controller' attribute.")
+
+    return fragment
+
+def memory_map(fragment: wiring.Component) -> MemoryMap:
+    return fragment.wb_decoder.bus.memory_map
+
+def interrupts(fragment: wiring.Component) -> InterruptMap:
+    return fragment.interrupt_controller.interrupts()
+
+def reset_addr(fragment: wiring.Component) -> MemoryMap:
+    return fragment.cpu._reset_addr
+
+
+# - soc introspections --------------------------------------------------------
+
+def csr_base(memory_map: MemoryMap) -> int:
     """Scan a memory map for the starting address for csr peripheral registers."""
     window: MemoryMap
     name:   MemoryMap.Name
@@ -41,7 +77,7 @@ def _csr_base(memory_map: MemoryMap) -> int:
         if name[0] == "wb_to_csr":
             return start
 
-def _csr_peripherals(memory_map: MemoryMap) -> dict[MemoryMap.Name, list[ResourceInfo]]:
+def csr_peripherals(memory_map: MemoryMap) -> dict[MemoryMap.Name, list[ResourceInfo]]:
     """Scan a memory map for csr peripheral registers."""
 
     # group registers by peripheral
@@ -60,7 +96,8 @@ def _csr_peripherals(memory_map: MemoryMap) -> dict[MemoryMap.Name, list[Resourc
 
     return csr_peripherals
 
-def _wb_peripherals(memory_map: MemoryMap) -> dict[
+
+def wb_peripherals(memory_map: MemoryMap) -> dict[
         MemoryMap.Name,
         list[
             tuple[

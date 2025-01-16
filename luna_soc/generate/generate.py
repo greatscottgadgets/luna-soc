@@ -7,7 +7,7 @@
 """Generate programming support files from SoC designs."""
 
 #from .c   import GenerateC
-from .svd import GenerateSVD
+#from .svd import GenerateSVD
 #from .rust import GenerateRust
 
 #from ..gateware.lunasoc import LunaSoC
