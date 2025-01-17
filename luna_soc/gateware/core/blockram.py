@@ -30,8 +30,6 @@ from amaranth.utils       import exact_log2
 from amaranth_soc         import wishbone
 from amaranth_soc.memory  import MemoryMap
 
-__all__ = ["SRAMPeripheralNew"]
-
 
 class Peripheral(wiring.Component):
     """SRAM storage peripheral.
@@ -53,7 +51,7 @@ class Peripheral(wiring.Component):
         Wishbone bus interface.
     """
     # TODO raise bus.err if read-only and a bus write is attempted.
-    def __init__(self, *, size, data_width=32, granularity=8, writable=True, name="sram"):
+    def __init__(self, *, size, data_width=32, granularity=8, writable=True, name="blockram"):
         if not isinstance(size, int) or size <= 0 or size & size-1:
             raise ValueError("Size must be an integer power of two, not {!r}"
                              .format(size))
