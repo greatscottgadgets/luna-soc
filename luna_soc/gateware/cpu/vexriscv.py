@@ -1,7 +1,7 @@
 #
 # This file is part of LUNA.
 #
-# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2023-2025 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 import os
@@ -12,6 +12,9 @@ from amaranth.lib.wiring  import Component, In, Out
 
 from amaranth_soc         import wishbone
 from amaranth_soc.periph  import ConstantMap
+
+__all__ = ["VexRiscv"]
+
 
 # Variants --------------------------------------------------------------------
 
@@ -27,10 +30,10 @@ JTAG_VARIANTS = [ "cynthion+jtag" ]
 # - VexRiscv ------------------------------------------------------------------
 
 class VexRiscv(Component):
-    #name       = "vexriscv"
-    #arch       = "riscv"
-    #byteorder  = "little"
-    #data_width = 32
+    name       = "vexriscv"
+    arch       = "riscv"
+    byteorder  = "little"
+    data_width = 32
 
     def __init__(self, variant="imac+dcache", reset_addr=0x00000000):
         self._variant    = variant
@@ -76,23 +79,9 @@ class VexRiscv(Component):
             logging.info(f"reading verilog file: {self._source_path}")
             self._source_verilog = f.read()
 
-    #@property
-    #def reset_addr(self):
-    #    return self._reset_addr
-
-    #@property
-    #def muldiv(self):
-    #    return "hard" # "hard" if self._cpu.with_muldiv else "soft"
-
-    #@property
-    #def constant_map(self):
-    #    return ConstantMap(
-    #        VEXRISCV          = True,
-    #        RESET_ADDR        = self._reset_addr,
-    #        ARCH_RISCV        = True,
-    #        RISCV_MULDIV_SOFT = self.muldiv == "soft",
-    #        BYTEORDER_LITTLE  = True,
-    #    )
+    @property
+    def reset_addr(self):
+        return self._reset_addr
 
     def elaborate(self, platform):
         m = Module()
