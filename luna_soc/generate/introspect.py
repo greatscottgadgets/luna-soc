@@ -64,7 +64,7 @@ def interrupts(fragment: wiring.Component) -> InterruptMap:
     return fragment.interrupt_controller.interrupts()
 
 def reset_addr(fragment: wiring.Component) -> MemoryMap:
-    return fragment.cpu._reset_addr
+    return fragment.cpu.reset_addr
 
 
 # - soc introspections --------------------------------------------------------

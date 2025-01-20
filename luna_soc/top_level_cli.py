@@ -73,8 +73,8 @@ def top_level_cli(fragment, *pos_args, **kwargs):
         help="If provided, a SVD description of this design's SoC will be printed to the stdout. Other options ignored.")
 
     # TODO never used?
-    #parser.add_argument('--get-fw-address', action='store_true',
-    #    help="If provided, the utility will print the address firmware should be loaded to to stdout. Other options ignored.")
+    parser.add_argument('--get-reset-address', action='store_true',
+        help="If provided, the utility will print the cpu's reset address to stdout. Other options ignored.")
     #parser.add_argument('--log-resources', action='store_true',
     #    help="If provided, the utility will print a summary of the design's SoC memory map and interrupts. Other options ignored.")
 
@@ -162,11 +162,15 @@ def top_level_cli(fragment, *pos_args, **kwargs):
         SVDFile(memory_map, interrupts).generate(file=None)
         sys.exit(0)
 
-    # TODO never used?
-    # # If we've been asked for the address firmware should be loaded, generate _only_ that.
-    # if args.get_fw_address:
-    #     print(f"0x{Introspect(fragment.soc).main_ram_address():08x}")
-    #     sys.exit(0)
+    # If we've been asked for the cpu reset address, generate _only_ that.
+    if args.get_reset_address:
+        from luna_soc.generate      import introspect
+
+        soc        = introspect.soc(fragment)
+        reset_addr = introspect.reset_addr(soc)
+
+        print(f"0x{reset_addr:08x}")
+        sys.exit(0)
 
     # TODO never used?
     # # If we've been asked to generate a log of the design's resources, generate -only- that.

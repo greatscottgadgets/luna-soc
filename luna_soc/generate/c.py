@@ -50,7 +50,6 @@ class LinkerScript():
         emit("")
 
         # memory regions
-        regions = set()
         emit("MEMORY")
         emit("{")
         window: MemoryMap
@@ -62,8 +61,6 @@ class LinkerScript():
             if self.reset_addr >= start and self.reset_addr < end:
                 start = self.reset_addr
             emit(f"    {name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{end-start:08x}")
-
-            regions.add(name)
         emit("}")
         emit("")
 
@@ -130,14 +127,13 @@ class Header():
         window_name: MemoryMap.Name
         for window, window_name, (start, end, ratio) in self.memory_map.windows():
             base_addr = start
-            print(f"\n{window_name} => 0x{start:08x}")
 
             resource_info: ResourceInfo
             for resource_info in window.all_resources():
                 # normalize path and generate name
                 path = resource_info.path
                 path = tuple([MemoryMap.Name(n) for n in path[0]] if len(path) == 1 else path)
-                name = "_".join([str(s[0]) for s in path])
+                name = "_".join([str(s[0].lower()) for s in path])
 
                 # get resource address & size
                 start = resource_info.start
