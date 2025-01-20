@@ -6,9 +6,8 @@ from amaranth_soc         import csr, event
 
 
 class Peripheral(wiring.Component):
-    # FIXME group registers
     class Reload(csr.Register, access="rw"):
-        """Reload value of counter. When counter reaches 0 is is automatically reloaded with this value."""
+        """Reload value of counter. When counter reaches 0 it is automatically reloaded with this value."""
         def __init__(self, width):
             super().__init__({
                 "value": csr.Field(csr.action.RW, unsigned(width))
@@ -43,11 +42,11 @@ class Peripheral(wiring.Component):
         self._bridge = csr.Bridge(regs.as_memory_map())
 
         # events
-        self._sub_0 = event.Source(path=("sub_0",))
-        self._sub_1 = event.Source(path=("sub_1",)) # FIXME rename event names and use 2nd event
+        from typing import Annotated
+        ResetSource = Annotated[event.Source, "Interrupt that occurs when the timer reaches zero."]
+        self._zero = ResetSource(path=("zero",))
         event_map = event.EventMap()
-        event_map.add(self._sub_0)
-        event_map.add(self._sub_1)
+        event_map.add(self._zero)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
 
         # csr decoder
@@ -56,7 +55,6 @@ class Peripheral(wiring.Component):
         self._decoder.add(self._events.bus, name="ev")
 
         super().__init__({
-            #"bus":    In(csr.Signature(addr_width=regs.addr_width, data_width=regs.data_width)),
             "bus":    Out(self._decoder.bus.signature),
             "irq":    Out(unsigned(1)),
         })
@@ -82,7 +80,7 @@ class Peripheral(wiring.Component):
 
         # connect events to irq line
         m.d.comb += [
-            self._sub_0.i .eq(zero),
+            self._zero.i  .eq(zero),
             self.irq      .eq(self._events.src.i),
         ]
 

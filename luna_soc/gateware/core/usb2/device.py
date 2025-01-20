@@ -74,7 +74,6 @@ class Peripheral(wiring.Component):
         self._bridge = csr.Bridge(regs.as_memory_map())
 
         # events
-        # TODO desc="Interrupt that occurs when a USB bus reset is received."
         from typing import Annotated
         ResetSource = Annotated[event.Source, "Interrupt that occurs when a USB bus reset is received."]
         self._reset = ResetSource(path=("reset",))

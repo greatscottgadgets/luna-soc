@@ -16,8 +16,8 @@
  */
 void print_char(char c)
 {
-    while(!uart_tx_rdy_read());
-    uart_tx_data_write(c);
+    while(!uart0_tx_ready_read());
+    uart0_tx_data_write(c);
 }
 
 /**
@@ -39,14 +39,16 @@ int main(void)
     uint8_t led_value = 0b110000;
 
     // Set up our timer to periodically move the LEDs.
-    timer_en_write(1);
-    timer_reload_write(0x0C0000);
+    timer0_reload_write(0x0C0000);
+    timer0_enable_write(1);
+    timer0_ev_enable_write(1);
+    timer0_interrupt_enable();
 
     // And blink our LEDs.
     while(1) {
 
         // Skip all iterations that aren't our main one...
-        if (timer_ctr_read()) {
+        if (timer0_counter_read()) {
             continue;
         }
 

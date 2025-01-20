@@ -51,7 +51,7 @@ class Peripheral(wiring.Component):
         Wishbone bus interface.
     """
     # TODO raise bus.err if read-only and a bus write is attempted.
-    def __init__(self, *, size, data_width=32, granularity=8, writable=True, name="blockram"):
+    def __init__(self, *, size, data_width=32, granularity=8, writable=True, init=[], name="blockram"):
         if not isinstance(size, int) or size <= 0 or size & size-1:
             raise ValueError("Size must be an integer power of two, not {!r}"
                              .format(size))
@@ -66,7 +66,7 @@ class Peripheral(wiring.Component):
         self.name        = name
 
         size_words = (size * granularity) // data_width
-        self._mem  = memory.Memory(depth=size_words, shape=data_width, init=[])
+        self._mem  = memory.Memory(depth=size_words, shape=data_width, init=init)
 
         super().__init__({
             "bus": In(wishbone.Signature(addr_width=exact_log2(size_words),
