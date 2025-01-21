@@ -94,7 +94,7 @@ class Peripheral(wiring.Component):
         self._setup_received = event.Source(path=("setup_received",)) # mode="rise", desc="" ?
         event_map = event.EventMap()
         event_map.add(self._setup_received)
-        self._events = csr.event.EventMonitor(event_map, data_width=8) # TODO width=1 ?
+        self._events = csr.event.EventMonitor(event_map, data_width=8)
 
         # csr decoder
         self._decoder = csr.Decoder(addr_width=5, data_width=8)

@@ -79,7 +79,7 @@ class Peripheral(wiring.Component):
         self._reset = ResetSource(path=("reset",))
         event_map = event.EventMap()
         event_map.add(self._reset)
-        self._events = csr.event.EventMonitor(event_map, data_width=8) # TODO width=1 ?
+        self._events = csr.event.EventMonitor(event_map, data_width=8)
 
         # csr decoder
         self._decoder = csr.Decoder(addr_width=4, data_width=8)
@@ -129,7 +129,7 @@ class Peripheral(wiring.Component):
 
         m.d.comb += self.full_speed_only.eq(self._control.f.full_speed_only.data)
 
-        # event: buus reset detected
+        # event: bus reset detected
         m.d.comb += self._reset.i.eq(self.bus_reset)
 
         # connect events to irq line
