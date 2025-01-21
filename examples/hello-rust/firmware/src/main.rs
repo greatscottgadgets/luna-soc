@@ -1,17 +1,14 @@
 #![no_std]
 #![no_main]
 
-use lunasoc_pac as pac;
-use lunasoc_hal as hal;
-
-use hal::hal::delay::DelayUs;
-use hal::Serial0;
-use hal::Timer0;
-
 use log::info;
-
 use panic_halt as _;
 use riscv_rt::entry;
+use lunasoc_hal::hal::delay::DelayUs;
+
+use firmware::{pac, hal};
+use hal::Serial0;
+use hal::Timer0;
 
 #[riscv_rt::pre_init]
 unsafe fn pre_main() {
@@ -25,10 +22,10 @@ fn main() -> ! {
     let leds = &peripherals.LEDS;
 
     // initialize logging
-    let serial = Serial0::new(peripherals.UART);
-    hello_rust::log::init(serial);
+    let serial = Serial0::new(peripherals.UART0);
+    firmware::log::init(serial);
 
-    let mut timer = Timer0::new(peripherals.TIMER, pac::clock::sysclk());
+    let mut timer = Timer0::new(peripherals.TIMER0, pac::clock::sysclk());
     let mut counter = 0;
     let mut direction = true;
     let mut led_state = 0b110000;
@@ -52,7 +49,7 @@ fn main() -> ! {
             }
         }
 
-        leds.output().write(|w| unsafe { w.output().bits(led_state) });
+        leds.output().write(|w| unsafe { w.bits(led_state) });
         counter += 1;
     }
 }
