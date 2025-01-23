@@ -29,7 +29,7 @@ firmware.bin: memory.x
 # - generated files -----------------------------------------------------------
 
 memory.x: $(SOC)
-	python top.py --generate-memory-x > $@
+	python ./top.py --generate-memory-x > $@
 
 
 # - gateware ------------------------------------------------------------------
