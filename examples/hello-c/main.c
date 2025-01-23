@@ -39,10 +39,8 @@ int main(void)
     uint8_t led_value = 0b110000;
 
     // Set up our timer to periodically move the LEDs.
-    timer0_reload_write(0x0C0000);
+    timer0_reload_write(6000000);
     timer0_enable_write(1);
-    timer0_ev_enable_write(1);
-    timer0_interrupt_enable();
 
     // And blink our LEDs.
     while(1) {
@@ -51,6 +49,10 @@ int main(void)
         if (timer0_counter_read()) {
             continue;
         }
+
+        // Reset timer...
+        timer0_enable_write(0);
+        timer0_enable_write(1);
 
         // ... compute our pattern ...
         if (shifting_right) {

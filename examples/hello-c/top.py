@@ -11,18 +11,17 @@ import sys
 from luna                            import configure_default_logging
 from luna.gateware.usb.usb2.device   import USBDevice
 
+import luna_soc
+from luna_soc.gateware.cpu           import InterruptController, Minerva
+from luna_soc.gateware.core          import blockram, timer, uart
+from luna_soc.gateware.provider      import cynthion as provider
+from luna_soc.util.readbin           import get_mem_data
+
 from amaranth                        import *
 from amaranth.lib                    import wiring
 
 from amaranth_soc                    import csr, gpio, wishbone
 from amaranth_soc.csr.wishbone       import WishboneCSRBridge
-
-from luna_soc.gateware.cpu           import InterruptController, Minerva
-from luna_soc.gateware.core          import blockram, timer, uart
-from luna_soc.gateware.provider      import cynthion as provider
-
-from luna_soc.util.readbin           import get_mem_data
-
 
 CLOCK_FREQUENCIES_MHZ = {
     'sync': 60
