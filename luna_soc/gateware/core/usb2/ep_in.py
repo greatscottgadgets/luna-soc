@@ -11,13 +11,15 @@ Equivalent (but not binary-compatbile) implementation of ValentyUSB's ``eptri``.
 For an example, see ``examples/usb/eptri`` or TinyUSB's ``luna/dcd_eptri.c``.
 """
 
+from typing                           import Annotated
+
 from amaranth                         import *
 from amaranth.hdl.xfrm                import ResetInserter, DomainRenamer
 from amaranth.lib                     import wiring
 from amaranth.lib.fifo                import SyncFIFOBuffered
 from amaranth.lib.wiring              import In, Out, connect, flipped
 
-from amaranth_soc           import csr, event
+from amaranth_soc                     import csr, event
 
 from luna.gateware.usb.usb2.endpoint  import EndpointInterface
 
@@ -47,7 +49,7 @@ class Peripheral(wiring.Component):
                     a zero-length packet is generated.
                     Note that any IN requests that do not match the endpoint number are automatically NAK'd.
         """
-        number : csr.Field(csr.action.W,       unsigned(4)) # desc="" ? # FIXME  get around doubling RW registers?
+        number : csr.Field(csr.action.W,       unsigned(4))
         _0     : csr.Field(csr.action.ResRAW0, unsigned(4))
 
     class Stall(csr.Register, access="w"):
@@ -57,8 +59,7 @@ class Peripheral(wiring.Component):
                      STALL token, rather than DATA or a NAK.
                      For EP0, this field will automatically be cleared when a new SETUP token is received.
         """
-        stalled : csr.Field(csr.action.W,       unsigned(1)) # TODO RW1C (periph precedence) or
-                                                             #      RW1S (cpu precedence) ?
+        stalled : csr.Field(csr.action.W,       unsigned(1))
         _0      : csr.Field(csr.action.ResRAW0, unsigned(7))
 
     class Pid(csr.Register, access="w"):
@@ -80,9 +81,8 @@ class Peripheral(wiring.Component):
             pid:  Contains the current PID toggle bit for the given endpoint.
         """
         nak  : csr.Field(csr.action.R,        unsigned(16))
-        epno : csr.Field(csr.action.R,        unsigned(4)) # desc="" ?
+        epno : csr.Field(csr.action.R,        unsigned(4))
         _0   : csr.Field(csr.action.ResRAW0,  unsigned(4))
-        # CHECK: stall ?
         idle : csr.Field(csr.action.R,        unsigned(1))
         have : csr.Field(csr.action.R,        unsigned(1))
         pid  : csr.Field(csr.action.R,        unsigned(1))
@@ -93,7 +93,7 @@ class Peripheral(wiring.Component):
 
             fifo: A write to this field Clears the FIFO without transmitting.
         """
-        fifo : csr.Field(csr.action.W,       unsigned(1)) # FIXME do not like name
+        fifo : csr.Field(csr.action.W,       unsigned(1))
         _1   : csr.Field(csr.action.ResRAW0, unsigned(7))
 
     class Data(csr.Register, access="w"):
@@ -117,11 +117,11 @@ class Peripheral(wiring.Component):
 
         self._max_packet_size = max_packet_size
 
-        # I/O port   FIXME ambiguity - private? or wiring.connect() ?
+        # I/O port   FIXME ambiguity - private or signature ?
         self.interface = EndpointInterface()
 
         # registers
-        regs = csr.Builder(addr_width=4, data_width=8) # FIXME addr_width _really_ needs to be auto-calced
+        regs = csr.Builder(addr_width=4, data_width=8)
         self._endpoint = regs.add("endpoint", self.Endpoint())
         self._stall    = regs.add("stall",    self.Stall())
         self._pid      = regs.add("pid",      self.Pid())
@@ -131,9 +131,8 @@ class Peripheral(wiring.Component):
         self._bridge   = csr.Bridge(regs.as_memory_map())
 
         # events
-        # TODO desc=""""Indicates that the host has successfully transferred an ``IN`` packet, and
-        #               that the FIFO is now empty."""
-        self._done = event.Source(path=("done",)) # mode="rise", desc="" ?
+        EventSource = Annotated[event.Source, "Indicates that the host has successfully transferred an ``IN`` packet, and that the FIFO is now empty."]
+        self._done = EventSource(path=("done",))
         event_map = event.EventMap()
         event_map.add(self._done)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
@@ -220,7 +219,6 @@ class Peripheral(wiring.Component):
                     endpoint_data_pid[i]  .eq(0),
                     endpoint_nakked[i]    .eq(0),
                 ]
-
 
         # Set the value of our endpoint `stall` based on our `stall` register...
         with m.If(self._stall.f.stalled.w_stb):

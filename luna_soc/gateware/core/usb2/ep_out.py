@@ -11,13 +11,15 @@ Equivalent (but not binary-compatbile) implementation of ValentyUSB's ``eptri``.
 For an example, see ``examples/usb/eptri`` or TinyUSB's ``luna/dcd_eptri.c``.
 """
 
+from typing                           import Annotated
+
 from amaranth                         import *
 from amaranth.hdl.xfrm                import ResetInserter, DomainRenamer
 from amaranth.lib                     import wiring
 from amaranth.lib.fifo                import SyncFIFOBuffered
 from amaranth.lib.wiring              import In, Out, connect, flipped
 
-from amaranth_soc           import csr, event
+from amaranth_soc                     import csr, event
 
 from luna.gateware.usb.usb2.endpoint  import EndpointInterface
 
@@ -40,7 +42,7 @@ class Peripheral(wiring.Component):
             address: Controls the current device's USB address. Should be written after a SET_ADDRESS request
                      is received. Automatically resets back to zero on a USB reset.
         """
-        address : csr.Field(csr.action.RW,      unsigned(8)) # desc="" ?
+        address : csr.Field(csr.action.RW,      unsigned(8))
 
     class Endpoint(csr.Register, access="rw"):
         """ Endpoint register
@@ -49,7 +51,7 @@ class Peripheral(wiring.Component):
             at once. That is, multiple endpoints can be ready to receive data at a time. See the `prime`
             and `enable` bits for usage.
         """
-        number : csr.Field(csr.action.RW,      unsigned(4)) # desc="" ? # FIXME  get around doubling RW registers?
+        number : csr.Field(csr.action.RW,      unsigned(4))
         _0     : csr.Field(csr.action.ResRAW0, unsigned(4))
 
     class Enable(csr.Register, access="w"):
@@ -69,10 +71,17 @@ class Peripheral(wiring.Component):
                     select the endpoint with the `epno` register; and then write a '1' into the prime and
                     enable register. This prepares our FIFO to receive data; and the next OUT transaction will
                     be captured into the FIFO.
+
                     When a transaction is complete, the `enable` bit is reset; the `prime` is not. This
                     effectively means that `enable` controls receiving on _any_ of the primed endpoints;
                     while `prime` can be used to build a collection of endpoints willing to participate in
                     receipt.
+
+                    Note that this does not apply to the control endpoint. Once the control endpoint has
+                    received a packet it will be un-primed and need to be re-primed before it can receive
+                    again. This is to ensure that we can establish an order on the receipt of the setup
+                    packet and any associated data.
+
                     Only one transaction / data packet is captured per `enable` write; repeated enabling is
                     necessary to capture multiple packets.
         """
@@ -142,11 +151,11 @@ class Peripheral(wiring.Component):
 
         self._max_packet_size = max_packet_size
 
-        # I/O port   FIXME ambiguity - private? or wiring.connect() ?
+        # I/O port   FIXME ambiguity - private, or use a signature?
         self.interface = EndpointInterface()
 
         # registers
-        regs = csr.Builder(addr_width=5, data_width=8) # FIXME addr_width _really_ needs to be auto-calced
+        regs = csr.Builder(addr_width=5, data_width=8)
         self._control  = regs.add("control",  self.Control())
         self._endpoint = regs.add("endpoint", self.Endpoint())
         self._enable   = regs.add("enable",   self.Enable())
@@ -159,10 +168,8 @@ class Peripheral(wiring.Component):
         self._bridge   = csr.Bridge(regs.as_memory_map())
 
         # events
-        # TODO desc=""""Indicates that an ``OUT`` packet has successfully been transferred
-        #               from the host.  This bit must be cleared in order to receive
-        #               additional packets."""
-        self._done = event.Source(path=("done",)) # mode="rise", desc="" ?
+        EventSource = Annotated[event.Source, "Indicates that an ``OUT`` packet has successfully been transferred from the host. This bit must be cleared in order to receive additional packets."]
+        self._done = EventSource(path=("done",))
         event_map = event.EventMap()
         event_map.add(self._done)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
@@ -225,6 +232,11 @@ class Peripheral(wiring.Component):
                 enabled                          .eq(0),
                 fifo_ready                       .eq(0),
             ]
+            # If we've ACK'd a receive on the control endpoint, un-prime it to
+            # ensure we only receive control data _after_ we've had an opportunity
+            # to receive the setup packet.
+            with m.If(token.endpoint == 0):
+                m.d.usb += endpoint_primed[token.endpoint].eq(0)
 
         # Mark our FIFO as ready iff it is enabled and primed on receipt of a new token.
         with m.If(token.new_token & enabled & endpoint_primed[token.endpoint]):

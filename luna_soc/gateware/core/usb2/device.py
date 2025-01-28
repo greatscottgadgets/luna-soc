@@ -9,13 +9,13 @@ Contains the organizing gateware used to add USB Device functionality
 to your own designs; including the core :class:`USBDevice` class.
 """
 
-import logging
+from typing                         import Annotated
 
 from amaranth                       import *
 from amaranth.lib                   import wiring
 from amaranth.lib.wiring            import In, Out, connect, flipped
 
-from amaranth_soc         import csr, event
+from amaranth_soc                   import csr, event
 
 from luna.gateware.usb.usb2.device  import USBDevice
 
@@ -45,7 +45,7 @@ class Peripheral(wiring.Component):
             low_speed_only:  Set this bit to '1' to force the device to operate at low speed.
             full_speed_only: Set this bit to '1' to force the device to operate at full speed.
         """
-        connect         : csr.Field(csr.action.RW,      unsigned(1)) # desc="" ?
+        connect         : csr.Field(csr.action.RW,      unsigned(1))
         _0              : csr.Field(csr.action.ResRAW0, unsigned(7))
         low_speed_only  : csr.Field(csr.action.RW,      unsigned(1))
         full_speed_only : csr.Field(csr.action.RW,      unsigned(1))
@@ -57,11 +57,11 @@ class Peripheral(wiring.Component):
             speed: Indicates the current speed of the USB device. 0 indicates High; 1 => Full,
                    2 => Low, and 3 => SuperSpeed (incl SuperSpeed+).
         """
-        speed : csr.Field(csr.action.R,       unsigned(2)) # desc="" ?
+        speed : csr.Field(csr.action.R,       unsigned(2))
         _0    : csr.Field(csr.action.ResRAW0, unsigned(6))
 
     def __init__(self):
-        # I/O ports  FIXME ambiguity - private? or wiring.connect() ?
+        # I/O ports  FIXME ambiguity - private or signature ?
         self.connect         = Signal(reset=1)
         self.bus_reset       = Signal()
         self.low_speed_only  = Signal()
@@ -74,9 +74,8 @@ class Peripheral(wiring.Component):
         self._bridge = csr.Bridge(regs.as_memory_map())
 
         # events
-        from typing import Annotated
-        ResetSource = Annotated[event.Source, "Interrupt that occurs when a USB bus reset is received."]
-        self._reset = ResetSource(path=("reset",))
+        EventSource = Annotated[event.Source, "Interrupt that occurs when a USB bus reset is received."]
+        self._reset = EventSource(path=("reset",))
         event_map = event.EventMap()
         event_map.add(self._reset)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
@@ -92,7 +91,7 @@ class Peripheral(wiring.Component):
         })
         self.bus.memory_map = self._decoder.bus.memory_map
 
-    # TODO wiring.connect() ?
+
     def attach(self, device: USBDevice):
         """ Returns a list of statements necessary to connect this to a USB controller.
 
