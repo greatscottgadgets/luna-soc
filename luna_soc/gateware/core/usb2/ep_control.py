@@ -11,13 +11,15 @@ Equivalent (but not binary-compatbile) implementation of ValentyUSB's ``eptri``.
 For an example, see ``examples/usb/eptri`` or TinyUSB's ``luna/dcd_eptri.c``.
 """
 
+from typing                           import Annotated
+
 from amaranth                         import *
 from amaranth.hdl.xfrm                import ResetInserter, DomainRenamer
 from amaranth.lib                     import wiring
 from amaranth.lib.fifo                import SyncFIFOBuffered
 from amaranth.lib.wiring              import In, Out, connect, flipped
 
-from amaranth_soc           import csr, event
+from amaranth_soc                     import csr, event
 
 from luna.gateware.usb.usb2.endpoint  import EndpointInterface
 
@@ -44,7 +46,7 @@ class Peripheral(wiring.Component):
             address: Controls the current device's USB address. Should be written after a SET_ADDRESS
                      request is received. Automatically resets back to zero on a USB reset.
         """
-        address : csr.Field(csr.action.W,       unsigned(8)) # desc="" ?
+        address : csr.Field(csr.action.W,       unsigned(8))
 
     class Status(csr.Register, access="r"):
         """ Status register
@@ -53,8 +55,8 @@ class Peripheral(wiring.Component):
             epno:    The endpoint number associated with the most recently captured SETUP packet.
             have:    `1` iff data is available in the FIFO.
         """
-        address : csr.Field(csr.action.R,       unsigned(8)) # desc="" ?
-        epno    : csr.Field(csr.action.R,       unsigned(4)) # desc="" ?
+        address : csr.Field(csr.action.R,       unsigned(8))
+        epno    : csr.Field(csr.action.R,       unsigned(4))
         have    : csr.Field(csr.action.R,       unsigned(1))
         _0      : csr.Field(csr.action.ResRAW0, unsigned(3))
 
@@ -74,11 +76,11 @@ class Peripheral(wiring.Component):
             Reading a byte from this register advances the FIFO. The first eight bytes read
             from this contain the core SETUP packet.
         """
-        byte : csr.Field(csr.action.R, unsigned(8)) # desc="" ?
+        byte : csr.Field(csr.action.R, unsigned(8))
 
 
     def __init__(self):
-        # I/O port  FIXME ambiguity - private? or wiring.connect() ?
+        # I/O port  FIXME ambiguity - private or signature ?
         self.interface = EndpointInterface()
 
         # registers
@@ -90,8 +92,9 @@ class Peripheral(wiring.Component):
         self._bridge = csr.Bridge(regs.as_memory_map())
 
         # events
-        # TODO desc="Interrupt that triggers when a new SETUP packet is ready to be read."
-        self._setup_received = event.Source(path=("setup_received",)) # mode="rise", desc="" ?
+        from typing import Annotated
+        EventSource = Annotated[event.Source, "Interrupt that triggers when a new SETUP packet is ready to be read."]
+        self._setup_received = EventSource(path=("setup_received",))
         event_map = event.EventMap()
         event_map.add(self._setup_received)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
