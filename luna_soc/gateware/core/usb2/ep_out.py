@@ -1,7 +1,7 @@
 #
 # This file is part of LUNA.
 #
-# Copyright (c) 2020-2024 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 """ Implementation of a Triple-FIFO endpoint manager.
@@ -185,8 +185,6 @@ class Peripheral(wiring.Component):
         })
         self.bus.memory_map = self._decoder.bus.memory_map
 
-        self.debug = Signal(6)
-
     def elaborate(self, platform):
         m = Module()
         m.submodules += [self._bridge, self._events, self._decoder]
@@ -332,15 +330,5 @@ class Peripheral(wiring.Component):
 
         # connect events to irq line
         m.d.comb += self.irq.eq(self._events.src.i)
-
-        # debug
-        m.d.comb += [
-            self.debug[3]  .eq(is_endpoint_primed),
-            self.debug[4]  .eq(enabled),
-            #self.debug[5]  .eq(token.is_out),
-            #self.debug[5]  .eq(interface.rx_pid_toggle),
-            self.debug[5]  .eq(is_redundant_pid),
-        ]
-
 
         return DomainRenamer({"sync": "usb"})(m)

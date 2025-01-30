@@ -1,7 +1,7 @@
 #
 # This file is part of LUNA.
 #
-# Copyright (c) 2020-2024 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 """ Implementation of a Triple-FIFO endpoint manager.
@@ -148,8 +148,6 @@ class Peripheral(wiring.Component):
         })
         self.bus.memory_map = self._decoder.bus.memory_map
 
-        self.debug = Signal(6)
-
     def elaborate(self, platform):
         m = Module()
         m.submodules += [self._bridge, self._events, self._decoder]
@@ -276,7 +274,6 @@ class Peripheral(wiring.Component):
 
             # Drive our IDLE line based on our FSM state.
             m.d.comb += self._status.f.idle.r_data.eq(f.ongoing('IDLE'))
-            m.d.comb += self.debug[0].eq(f.ongoing('PRIMED'))
 
             # IDLE -- our CPU hasn't yet requested that we send data.
             # We'll wait for it to do so, and NAK any packets that arrive.
@@ -376,16 +373,7 @@ class Peripheral(wiring.Component):
                 with m.If(self._reset.f.fifo.w_stb):
                     m.next = "IDLE"
 
-
         # connect events to irq line
         m.d.comb += self.irq.eq(self._events.src.i)
-
-        # debug
-        m.d.comb += [
-            self.debug[1]  .eq(self._endpoint.f.number.w_stb),
-            #self.debug[2]  .eq(new_in_token),
-            self.debug[2]  .eq(self.interface.tx_pid_toggle),
-        ]
-
 
         return DomainRenamer({"sync": "usb"})(m)

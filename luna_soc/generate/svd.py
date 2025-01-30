@@ -21,7 +21,7 @@ from amaranth_soc.memory    import MemoryMap, ResourceInfo
 from ..gateware.cpu.ic      import InterruptMap
 from .                      import introspect
 
-class SVDFile:
+class SVD:
     def __init__(self, memory_map: MemoryMap, interrupts: InterruptMap):
         self.interrupts      = interrupts
         self.csr_base        = introspect.csr_base(memory_map)

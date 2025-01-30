@@ -5,11 +5,11 @@ import logging
 import tempfile
 import argparse
 
-from amaranth               import Elaboratable
-from amaranth._unused       import MustUse
+from amaranth                import Elaboratable
+from amaranth._unused        import MustUse
 
-from luna                   import configure_default_logging
-from luna.gateware.platform import get_appropriate_platform, configure_toolchain
+from luna                    import configure_default_logging
+from luna.gateware.platform  import get_appropriate_platform, configure_toolchain
 
 
 def top_level_cli(fragment, *pos_args, **kwargs):
@@ -71,12 +71,8 @@ def top_level_cli(fragment, *pos_args, **kwargs):
         help="If provided, a Rust linker script for design's SoC memory regions will be printed to the stdout. Other options ignored.")
     parser.add_argument('--generate-svd', action='store_true',
         help="If provided, a SVD description of this design's SoC will be printed to the stdout. Other options ignored.")
-
-    # TODO never used?
     parser.add_argument('--get-reset-address', action='store_true',
         help="If provided, the utility will print the cpu's reset address to stdout. Other options ignored.")
-    #parser.add_argument('--log-resources', action='store_true',
-    #    help="If provided, the utility will print a summary of the design's SoC memory map and interrupts. Other options ignored.")
 
     # Parse command arguments.
     args = parser.parse_args()
@@ -109,74 +105,50 @@ def top_level_cli(fragment, *pos_args, **kwargs):
     # If we've been asked to generate a C header, generate -only- that.
     if args.generate_c_header:
         logging.info("Generating C header for SoC")
-
-        from luna_soc.generate   import introspect
-        from luna_soc.generate.c import Header
-
+        from luna_soc.generate import c, introspect
         soc        = introspect.soc(fragment)
         memory_map = introspect.memory_map(soc)
         interrupts = introspect.interrupts(soc)
-
-        Header(memory_map, interrupts).generate(file=None)
+        c.Header(memory_map, interrupts).generate(file=None)
         sys.exit(0)
 
     # If we've been asked to generate C linker region info, generate -only- that.
     if args.generate_ld_script:
         logging.info("Generating C linker region info script for SoC")
-
-        from luna_soc.generate   import introspect
-        from luna_soc.generate.c import LinkerScript
-
+        from luna_soc.generate import c, introspect
         soc        = introspect.soc(fragment)
         memory_map = introspect.memory_map(soc)
         reset_addr = introspect.reset_addr(soc)
-
-        LinkerScript(memory_map, reset_addr).generate(file=None)
+        c.LinkerScript(memory_map, reset_addr).generate(file=None)
         sys.exit(0)
 
     # If we've been asked to generate Rust linker region info, generate -only- that.
     if args.generate_memory_x:
         logging.info("Generating Rust linker region info script for SoC")
-
-        from luna_soc.generate      import introspect
-        from luna_soc.generate.rust import LinkerScript
-
+        from luna_soc.generate import c, introspect
         soc        = introspect.soc(fragment)
         memory_map = introspect.memory_map(soc)
         reset_addr = introspect.reset_addr(soc)
-
-        LinkerScript(memory_map, reset_addr).generate(file=None)
+        rust.LinkerScript(memory_map, reset_addr).generate(file=None)
         sys.exit(0)
 
     # If we've been asked to generate a SVD description of the design, generate -only- that.
     if args.generate_svd:
         logging.info("Generating SVD description for SoC")
-
-        from luna_soc.generate     import introspect
-        from luna_soc.generate.svd import SVDFile
-
+        from luna_soc.generate import introspect, svd
         soc        = introspect.soc(fragment)
         memory_map = introspect.memory_map(soc)
         interrupts = introspect.interrupts(soc)
-
-        SVDFile(memory_map, interrupts).generate(file=None)
+        svd.SVD(memory_map, interrupts).generate(file=None)
         sys.exit(0)
 
     # If we've been asked for the cpu reset address, generate _only_ that.
     if args.get_reset_address:
-        from luna_soc.generate      import introspect
-
+        from luna_soc.generate import introspect
         soc        = introspect.soc(fragment)
         reset_addr = introspect.reset_addr(soc)
-
         print(f"0x{reset_addr:08x}")
         sys.exit(0)
-
-    # TODO never used?
-    # # If we've been asked to generate a log of the design's resources, generate -only- that.
-    # if args.log_resources:
-    #     Introspect(fragment.soc).log_resources()
-    #     sys.exit(0)
 
     # If we'be been asked to erase the FPGA's flash before performing other options, do that.
     if args.erase:
