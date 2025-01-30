@@ -62,7 +62,7 @@ class Peripheral(wiring.Component):
 
     def __init__(self):
         # I/O ports  FIXME ambiguity - private or signature ?
-        self.connect         = Signal(reset=1)
+        self.connect         = Signal(init=1)
         self.bus_reset       = Signal()
         self.low_speed_only  = Signal()
         self.full_speed_only = Signal()

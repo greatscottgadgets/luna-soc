@@ -51,7 +51,7 @@ class WishboneRAM(Elaboratable):
             data_width  -- The width of each memory word.
             granularity -- The number of bits of data per each address.
             init        -- Optional. The initial value of the relevant memory. Should be an array of integers, a
-                           filename, or a bytes-like object. If bytes are provided, the byteorder parametera allows
+                           filename, or a bytes-like object. If bytes are provided, the byteorder parameter allows
                            control over their interpretation. If a filename is provided, this filename will not be read
                            until elaboration; this allows reading the file to be deferred until the very last minute in
                            e.g. systems that generate the relevant file during build.
