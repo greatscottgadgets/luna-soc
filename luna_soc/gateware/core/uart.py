@@ -32,7 +32,6 @@ class PinSignature(wiring.Signature):
 
 
 class Peripheral(wiring.Component):
-    # FIXME group registers
     class TxData(csr.Register, access="w"):
         """valid to write to when tx_rdy is high, will trigger a transmit"""
         data: csr.Field(csr.action.W, unsigned(8))

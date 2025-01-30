@@ -76,8 +76,6 @@ class HelloSoc(wiring.Component):
             firmware = []
 
         # blockram
-        # TODO given that we now have it at our disposal, consider using:
-        #   https://github.com/amaranth-lang/amaranth-soc/blob/main/amaranth_soc/wishbone/sram.py
         self.blockram = blockram.Peripheral(size=blockram_size, init=firmware)
         self.wb_decoder.add(self.blockram.bus, addr=blockram_base, name="blockram")
 
@@ -119,7 +117,6 @@ class HelloSoc(wiring.Component):
 
         # interrupt controller
         m.submodules += self.interrupt_controller
-        # TODO wiring.connect(m, self.cpu.irq_external, self.interrupt_controller)
         m.d.comb += self.cpu.irq_external.eq(self.interrupt_controller.pending)
 
         # blockram

@@ -77,7 +77,7 @@ class WaitTimer(Elaboratable):
         m = Module()
 
         t     = int(self.t)
-        count = Signal(bits_for(t), reset=t)
+        count = Signal(bits_for(t), init=t)
 
         m.d.comb += self.done.eq(count == 0)
         with m.If(self.wait):

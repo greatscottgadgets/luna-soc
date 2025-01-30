@@ -1,3 +1,9 @@
+#
+# This file is part of LUNA.
+#
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
+
 from amaranth              import *
 from amaranth.lib          import enum, wiring
 from amaranth.lib.wiring   import In, Out, flipped, connect
@@ -5,9 +11,8 @@ from amaranth.lib.wiring   import In, Out, flipped, connect
 from amaranth_soc          import csr, event
 
 
-# Simple peripheral to interface with the ila
-
 class Peripheral(wiring.Component):
+    """ A simple peripheral interface to the ila. """
     class Control(csr.Register, access="w"):
         trigger: csr.Field(csr.action.W, unsigned(1))
 
@@ -48,9 +53,8 @@ class Peripheral(wiring.Component):
         # logic
         with m.If(self._control.f.trigger.w_stb):
             m.d.comb += self.trigger .eq(self._control.f.trigger.w_data)
-        #with m.If(self._trace.f.a.w_stb):
-        #    m.d.comb += self.a       .eq(self._trace.f.a.w_data)
-        m.d.comb += self.a       .eq(self._trace.f.a.w_data)
+        with m.If(self._trace.f.a.w_stb):
+            m.d.comb += self.a       .eq(self._trace.f.a.w_data)
         with m.If(self._trace.f.b.w_stb):
             m.d.comb += self.b       .eq(self._trace.f.b.w_data)
         with m.If(self._trace.f.c.w_stb):

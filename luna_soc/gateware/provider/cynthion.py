@@ -65,7 +65,6 @@ class UARTProvider(Component):
     def elaborate(self, platform):
         m = Module()
         uart = platform.request(self.id, self.index)
-        # TODO use connect()
         m.d.comb += [
             self.pins.rx .eq(uart.rx.i),
             uart.tx.o    .eq(self.pins.tx.o),
@@ -76,7 +75,6 @@ class UARTProvider(Component):
         return m
 
 
-# TODO I think it would be cooler to have a PhyProvider that can take a UTMI or ULPI platform resource.
 class ULPIProvider(Component):
     def __init__(self, id, index=0):
         self.id    = id
@@ -107,9 +105,9 @@ class ULPIProvider(Component):
             return m
 
         m.d.comb += [
-            self.bus.data.i  .eq(ulpi.data.i),      # i TODO check nested
-            ulpi.data.o      .eq(self.bus.data.o),  # o TODO check nested
-            ulpi.data.oe     .eq(self.bus.data.oe), # o TODO check nested
+            self.bus.data.i  .eq(ulpi.data.i),
+            ulpi.data.o      .eq(self.bus.data.o),
+            ulpi.data.oe     .eq(self.bus.data.oe),
 
             # see ulpi.Signature
             # ulpi.clk.o       .eq(self.bus.clk),     # o
@@ -174,9 +172,10 @@ class ApolloAdvertiserProvider(Component):
 
 
 class JtagProvider(Component):
-    def __init__(self, id="jtag", index=0):
-        self.id    = id
-        self.index = index
+    def __init__(self, id="jtag", index=0, with_reset=False):
+        self.id         = id
+        self.index      = index
+        self.with_reset = with_reset
         super().__init__({
             "pins": In(
                 wiring.Signature({
@@ -202,6 +201,8 @@ class JtagProvider(Component):
             self.pins.tdi  .eq(jtag.tdi.i),
             jtag.tdo.o     .eq(self.pins.tdo),
             self.pins.tck  .eq(jtag.tck.i),
-            #self.pins.rst  .eq(self.soc.cpu.ext_reset),
         ]
+        if self.with_reset:
+            m.d.comb += self.pins.rst.eq(self.soc.cpu.ext_reset),
+
         return m

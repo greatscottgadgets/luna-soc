@@ -18,15 +18,15 @@ class InterruptController(wiring.Component):
     def interrupts(self) -> InterruptMap:
         return self._interrupts
 
-    # TODO add line or peripheral ?
-    # if we go by convention it would only be the line
     def add(self, peripheral, *, name, number=None):
         if number is None:
-            raise ValueError("TODO")
+            raise ValueError("You need to supply a value for the IRQ number.")
         if number in self._interrupts.keys():
             raise ValueError(f"IRQ number '{number}' has already been used.")
-        if peripheral in self._interrupts.values(): # TODO fix this -- values is a tuple now
-            raise ValueError(f"Peripheral '{peripheral}' has already been added.")
+        if name in dict(self._interrupts.values()).keys():
+            raise ValueError(f"Peripheral name '{name}' has already been used.")
+        if peripheral in dict(self._interrupts.values()).values():
+            raise ValueError(f"Peripheral '{name}' has already been added: {peripheral}")
         self._interrupts[number] = (name, peripheral)
 
     def elaborate(self, platform):

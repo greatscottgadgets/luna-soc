@@ -19,8 +19,6 @@ __all__ = ["PinSignature", "Peripheral", "ECP5ConfigurationFlashInterface", "SPI
 
 
 class PinSignature(wiring.Signature):
-    """TODO
-    """
     def __init__(self):
         super().__init__({
             "dq" : In(

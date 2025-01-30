@@ -1,26 +1,8 @@
-# From lambdasoc, with some small updates
-# TODO: consider returning to use upstream lambdasoc instead...
 #
-# Copyright (C) 2020 LambdaConcept
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-
-# 1. Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-#    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# This file is part of LUNA.
+#
+# Copyright (c) 2023-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
 
 from amaranth             import *
 from amaranth.lib         import wiring, memory
@@ -29,6 +11,7 @@ from amaranth.utils       import exact_log2
 
 from amaranth_soc         import wishbone
 from amaranth_soc.memory  import MemoryMap
+from amaranth_soc.periph  import ConstantMap
 
 
 class Peripheral(wiring.Component):
@@ -39,18 +22,22 @@ class Peripheral(wiring.Component):
     size : int
         Memory size in bytes.
     data_width : int
-        Bus data width.
+        The width of each memory word.
     granularity : int
-        Bus granularity.
+        The number of bits of data per each address.
     writable : bool
         Memory is writable.
+    init : list[byte] Optional
+        The initial value of the relevant memory.
+    name : str
+        A descriptive name for the given memory.
 
     Attributes
     ----------
     bus : :class:`amaranth_soc.wishbone.Interface`
         Wishbone bus interface.
     """
-    # TODO raise bus.err if read-only and a bus write is attempted.
+
     def __init__(self, *, size, data_width=32, granularity=8, writable=True, init=[], name="blockram"):
         if not isinstance(size, int) or size <= 0 or size & size-1:
             raise ValueError("Size must be an integer power of two, not {!r}"
@@ -65,19 +52,19 @@ class Peripheral(wiring.Component):
         self.writable    = writable
         self.name        = name
 
-        size_words = (size * granularity) // data_width
-        self._mem  = memory.Memory(depth=size_words, shape=data_width, init=init)
+        depth = (size * granularity) // data_width
+        self._mem = memory.Memory(shape=data_width, depth=depth, init=init)
 
         super().__init__({
-            "bus": In(wishbone.Signature(addr_width=exact_log2(size_words),
+            "bus": In(wishbone.Signature(addr_width=exact_log2(depth),
                                          data_width=data_width,
-                                         granularity=granularity)),
+                                         granularity=granularity,
+                                         features={"cti", "bte"})),
         })
 
         memory_map = MemoryMap(addr_width=exact_log2(size), data_width=granularity)
         memory_map.add_resource(name=("memory", self.name,), size=size, resource=self)
         self.bus.memory_map = memory_map
-
 
     @property
     def init(self):
@@ -87,21 +74,40 @@ class Peripheral(wiring.Component):
     def init(self, init):
         self._mem.init = init
 
+    @property
+    def constant_map(self):
+        return ConstantMap(
+            SIZE = self.size,
+        )
+
     def elaborate(self, platform):
         m = Module()
         m.submodules.mem = self._mem
 
         incr = Signal.like(self.bus.adr)
 
+        with m.Switch(self.bus.bte):
+            with m.Case(wishbone.BurstTypeExt.LINEAR):
+                m.d.comb += incr.eq(self.bus.adr + 1)
+            with m.Case(wishbone.BurstTypeExt.WRAP_4):
+                m.d.comb += incr[:2].eq(self.bus.adr[:2] + 1)
+                m.d.comb += incr[2:].eq(self.bus.adr[2:])
+            with m.Case(wishbone.BurstTypeExt.WRAP_8):
+                m.d.comb += incr[:3].eq(self.bus.adr[:3] + 1)
+                m.d.comb += incr[3:].eq(self.bus.adr[3:])
+            with m.Case(wishbone.BurstTypeExt.WRAP_16):
+                m.d.comb += incr[:4].eq(self.bus.adr[:4] + 1)
+                m.d.comb += incr[4:].eq(self.bus.adr[4:])
+
         mem_rp = self._mem.read_port()
         m.d.comb += self.bus.dat_r.eq(mem_rp.data)
 
         with m.If(self.bus.cyc & self.bus.stb):
             m.d.sync += self.bus.ack.eq(1)
-            m.d.comb += mem_rp.addr.eq(self.bus.adr)
-
-        with m.If(self.bus.ack):
-            m.d.sync += self.bus.ack.eq(0)
+            with m.If((self.bus.cti == wishbone.CycleType.INCR_BURST) & self.bus.ack):
+                m.d.comb += mem_rp.addr.eq(incr)
+            with m.Else():
+                m.d.comb += mem_rp.addr.eq(self.bus.adr)
 
         if self.writable:
             mem_wp = self._mem.write_port(granularity=self.granularity)
@@ -109,5 +115,13 @@ class Peripheral(wiring.Component):
             m.d.comb += mem_wp.data.eq(self.bus.dat_w)
             with m.If(self.bus.cyc & self.bus.stb & self.bus.we):
                 m.d.comb += mem_wp.en.eq(self.bus.sel)
+
+        # We can handle any transaction request in a single cycle, when our RAM handles
+        # the read or write. Accordingly, we'll ACK the cycle after any request.
+        m.d.sync += self.bus.ack.eq(
+            self.bus.cyc &
+            self.bus.stb &
+            ~self.bus.ack
+        )
 
         return m
