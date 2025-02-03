@@ -151,7 +151,7 @@ class SetupFIFOInterface(Peripheral, Elaboratable):
         # Status and interrupts.
         #
 
-        with m.If(token.new_token):
+        with m.If(token.new_token & token.is_setup):
             m.d.usb += self.epno.r_data.eq(token.endpoint)
 
         # TODO: generate interrupts
