@@ -166,7 +166,7 @@ class Peripheral(wiring.Component):
 
         # status registers
         m.d.comb += self._status.f.address.r_data.eq(interface.active_address)
-        with m.If(token.new_token):
+        with m.If(token.new_token & token.is_setup):
             m.d.usb += self._status.f.epno.r_data.eq(token.endpoint)
 
         # connect events to irq line
