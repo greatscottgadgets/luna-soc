@@ -1,14 +1,14 @@
-from amaranth              import *
-from amaranth.lib          import wiring
-from amaranth.lib.wiring   import In, Out
-
 #
 # This file is part of LUNA.
 #
-# Copyright (c) 2020-2024 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 """ ULPI interfacing hardware. """
+
+from amaranth              import *
+from amaranth.lib          import wiring
+from amaranth.lib.wiring   import In, Out
 
 class Signature(wiring.Signature):
     """ULPI bus signature.
