@@ -1,3 +1,11 @@
+#
+# This file is part of LUNA.
+#
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
+
+""" The simplest interrupt controller. """
+
 from amaranth              import *
 from amaranth.lib          import wiring
 from amaranth.lib.wiring   import In, Out
@@ -5,7 +13,6 @@ from amaranth.lib.wiring   import In, Out
 # type aliases only in py 3.12 :-(
 # type InterruptMap = dict[int, (str, wiring.Component)]
 InterruptMap = dict[int, (str, wiring.Component)]
-
 
 class InterruptController(wiring.Component):
     def __init__(self, *, width):
