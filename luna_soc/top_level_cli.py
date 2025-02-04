@@ -1,3 +1,9 @@
+#
+# This file is part of LUNA.
+#
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
+
 import os
 import sys
 import shutil
@@ -125,7 +131,7 @@ def top_level_cli(fragment, *pos_args, **kwargs):
     # If we've been asked to generate Rust linker region info, generate -only- that.
     if args.generate_memory_x:
         logging.info("Generating Rust linker region info script for SoC")
-        from luna_soc.generate import c, introspect
+        from luna_soc.generate import rust, introspect
         soc        = introspect.soc(fragment)
         memory_map = introspect.memory_map(soc)
         reset_addr = introspect.reset_addr(soc)
