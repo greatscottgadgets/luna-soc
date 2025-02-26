@@ -48,4 +48,4 @@ luna_soc = "luna_soc"
 
 [tool.setuptools-git-versioning]
 enabled = true
-starting_version = "0.1.0"
+starting_version = "0.2.0"

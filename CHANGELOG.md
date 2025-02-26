@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.2.3] - 2025-02-26
+### Fixed
+- Only set ep_control epno register if it's a setup packet.
+### Removed
+* Dropped support for Python 3.8
+### Security
+* Bump jinja2 from 3.1.4 to 3.1.5
+
 ## [0.2.2] - 2024-12-19
 ### Added
 - Support for yowasp when yosys is unavailable.
@@ -31,7 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.2...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.3...HEAD
+[0.2.3]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/greatscottgadgets/luna-soc/compare/0.1.0...0.2.0
