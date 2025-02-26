@@ -653,8 +653,8 @@ class OutFIFOInterface(Peripheral, Elaboratable):
                 m.d.usb += endpoint_primed[token.endpoint].eq(0)
 
         # Mark our FIFO as ready iff it is enabled and primed on receipt of a new token.
-        with m.If(token.new_token & self.enable.r_data & endpoint_primed[token.endpoint]):
-            m.d.usb += fifo_ready.eq(1)
+        with m.If(token.new_token):
+            m.d.usb += fifo_ready.eq(self.enable.r_data & endpoint_primed[token.endpoint])
 
         # Set the value of our endpoint `stall` based on our `stall` register...
         with m.If(self.stall.w_stb):
