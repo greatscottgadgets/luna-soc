@@ -736,7 +736,7 @@ class OutFIFOInterface(Peripheral, Elaboratable):
 
         # Whenever we capture data, update our associated endpoint number
         # to match the endpoint on which we received the relevant data.
-        with m.If(token.new_token & token.is_out):
+        with m.If(token.new_token & token.is_out & self.enable.r_data):
             m.d.usb += self.data_ep.r_data.eq(token.endpoint)
 
         # Whenever we ACK a non-redundant receive, toggle our DATA PID.
