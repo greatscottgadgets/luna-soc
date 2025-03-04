@@ -4,36 +4,36 @@ ENTRY(_start)
 
 SECTIONS
 {
-	. = ORIGIN(ram);
+    . = ORIGIN(blockram);
 
-	/* Start of day code. */
-	.init :
-	{
-		*(.init) *(.init.*)
-	} > ram
-	.text :
-	{
-		*(.text) *(.text.*)
-	} > ram
+    /* Start of day code. */
+    .init :
+    {
+        *(.init) *(.init.*)
+    } > blockram
+    .text :
+    {
+        *(.text) *(.text.*)
+    } > blockram
 
-	.rodata :
-	{
-		*(.rodata) *(.rodata.*)
-	} > ram
-	.sdata :
-	{
-		PROVIDE(__global_pointer$ = .);
-		*(.sdata) *(.sdata.*)
-	}
-	.data :
-	{
-		*(.data) *(.data.*)
-	} > ram
-	.bss :
-	{
-		*(.bss) *(.bss.*)
-	} > ram
+    .rodata :
+    {
+        *(.rodata) *(.rodata.*)
+    } > blockram
+    .sdata :
+    {
+        PROVIDE(__global_pointer$ = .);
+        *(.sdata) *(.sdata.*)
+    }
+    .data :
+    {
+        *(.data) *(.data.*)
+    } > blockram
+    .bss :
+    {
+        *(.bss) *(.bss.*)
+    } > blockram
 
 }
 
-PROVIDE(__stack_top = ORIGIN(ram) + LENGTH(ram));
+PROVIDE(__stack_top = ORIGIN(blockram) + LENGTH(blockram));

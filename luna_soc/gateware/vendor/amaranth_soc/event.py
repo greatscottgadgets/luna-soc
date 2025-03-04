@@ -1,75 +1,102 @@
-import enum
-from collections import OrderedDict
-
 from amaranth import *
+from amaranth.lib import enum, wiring
+from amaranth.lib.wiring import In, Out
 
 
 __all__ = ["Source", "EventMap", "Monitor"]
 
 
-class Source(Record):
+class Source(wiring.PureInterface):
     class Trigger(enum.Enum):
         """Event trigger mode."""
         LEVEL = "level"
         RISE  = "rise"
         FALL  = "fall"
 
+    class Signature(wiring.Signature):
+        """Event source signature.
+
+        Parameters
+        ----------
+        trigger : :class:`Source.Trigger`
+            Trigger mode. An event can be edge- or level-triggered by the input line.
+
+        Interface attributes
+        --------------------
+        i : Signal()
+            Input line. Sampled in order to detect an event.
+        trg : Signal()
+            Event trigger. Asserted when an event occurs, according to the trigger mode.
+        """
+        def __init__(self, *, trigger="level"):
+            super().__init__({
+                "i":   Out(1),
+                "trg": In(1),
+            })
+            self._trigger = Source.Trigger(trigger)
+
+        @property
+        def trigger(self):
+            return self._trigger
+
+        def create(self, *, path=None, src_loc_at=0):
+            """Create a compatible interface.
+
+            See :meth:`wiring.Signature.create` for details.
+
+            Returns
+            -------
+            A :class:`Source` object using this signature.
+            """
+            return Source(trigger=self.trigger, path=path, src_loc_at=1 + src_loc_at)
+
+        def __eq__(self, other):
+            """Compare signatures.
+
+            Two signatures are equal if they have the same trigger mode.
+            """
+            return isinstance(other, Source.Signature) and self.trigger == other.trigger
+
+        def __repr__(self):
+            return f"event.Source.Signature({self.members!r})"
+
     """Event source interface.
 
     Parameters
     ----------
-    trigger : :class:`Trigger`
+    trigger : :class:`Source.Trigger`
         Trigger mode. An event can be edge- or level-triggered by the input line.
-    name: str
-        Name of the underlying record.
+    path : iter(:class:`str`)
+        Path to this event source interface. Optional. See :class:`wiring.PureInterface`.
 
     Attributes
     ----------
-    i : Signal()
-        Input line. Sampled in order to detect an event.
-    trg : Signal()
-        Event trigger. Asserted when an event occurs, according to the trigger mode.
+    event_map : :class:`EventMap`
+        A collection of event sources.
     """
-    def __init__(self, *, trigger="level", name=None, src_loc_at=0):
-        choices = ("level", "rise", "fall")
-        if not isinstance(trigger, Source.Trigger) and trigger not in choices:
-            raise ValueError("Invalid trigger mode {!r}; must be one of {}"
-                             .format(trigger, ", ".join(choices)))
-        self.trigger = Source.Trigger(trigger)
-        self._map    = None
+    def __init__(self, *, trigger="level", path=None, src_loc_at=0):
+        super().__init__(Source.Signature(trigger=trigger), path=path, src_loc_at=1 + src_loc_at)
+        self._event_map = None
 
-        super().__init__([
-            ("i",   1),
-            ("trg", 1),
-        ], name=name, src_loc_at=1 + src_loc_at)
+    @property
+    def trigger(self):
+        return self.signature.trigger
 
     @property
     def event_map(self):
-        """Event map.
-
-        Return value
-        ------------
-        A :class:`EventMap` describing subordinate event sources.
-
-        Exceptions
-        ----------
-        Raises :exn:`NotImplementedError` if the source does not have an event map.
-        """
-        if self._map is None:
-            raise NotImplementedError("Event source {!r} does not have an event map"
-                                      .format(self))
-        return self._map
+        if self._event_map is None:
+            raise AttributeError(f"{self!r} does not have an event map")
+        return self._event_map
 
     @event_map.setter
     def event_map(self, event_map):
         if not isinstance(event_map, EventMap):
-            raise TypeError("Event map must be an instance of EventMap, not {!r}"
-                            .format(event_map))
+            raise TypeError(f"Event map must be an instance of EventMap, not {event_map!r}")
         event_map.freeze()
-        self._map = event_map
+        self._event_map = event_map
 
-    # FIXME: get rid of this
-    __hash__ = object.__hash__
+    def __repr__(self):
+        return f"event.Source({self.signature!r})"
 
 
 class EventMap:
@@ -80,7 +107,7 @@ class EventMap:
     increment, starting at 0.
     """
     def __init__(self):
-        self._sources = OrderedDict()
+        self._sources = dict()
         self._frozen  = False
 
     @property
@@ -113,12 +140,11 @@ class EventMap:
         Raises :exn:`ValueError` if the event map is frozen.
         """
         if self._frozen:
-            raise ValueError("Event map has been frozen. Cannot add source.")
+            raise ValueError("Event map has been frozen. Cannot add source")
         if not isinstance(src, Source):
-            raise TypeError("Event source must be an instance of event.Source, not {!r}"
-                            .format(src))
-        if src not in self._sources:
-            self._sources[src] = self.size
+            raise TypeError(f"Event source must be an instance of event.Source, not {src!r}")
+        if id(src) not in self._sources:
+            self._sources[id(src)] = src, self.size
 
     def index(self, src):
         """Get the index corresponding to an event source.
@@ -137,9 +163,9 @@ class EventMap:
         Raises :exn:`KeyError` if the source is not found.
         """
         if not isinstance(src, Source):
-            raise TypeError("Event source must be an instance of event.Source, not {!r}"
-                            .format(src))
-        return self._sources[src]
+            raise TypeError(f"Event source must be an instance of event.Source, not {src!r}")
+        _, index = self._sources[id(src)]
+        return index
 
     def sources(self):
         """Iterate event sources.
@@ -148,11 +174,10 @@ class EventMap:
         ------------
         A tuple ``src, index`` corresponding to an event source and its index.
         """
-        for src, index in self._sources.items():
-            yield src, index
+        yield from self._sources.values()
 
 
-class Monitor(Elaboratable):
+class Monitor(wiring.Component):
     """Event monitor.
 
     A monitor for subordinate event sources.
@@ -160,7 +185,7 @@ class Monitor(Elaboratable):
     Parameters
     ----------
     event_map : :class:`EventMap`
-        Event map.
+        A collection of event sources.
     trigger : :class:`Source.Trigger`
         Trigger mode. See :class:`Source`.
 
@@ -176,12 +201,15 @@ class Monitor(Elaboratable):
         Clear selected pending events.
     """
     def __init__(self, event_map, *, trigger="level"):
-        self.src = Source(trigger=trigger)
+        if not isinstance(event_map, EventMap):
+            raise TypeError(f"Event map must be an instance of EventMap, not {event_map!r}")
+        super().__init__({
+            "src":     Out(Source.Signature(trigger=trigger)),
+            "enable":  In(event_map.size),
+            "pending": In(event_map.size),
+            "clear":   In(event_map.size),
+        })
         self.src.event_map = event_map
-
-        self.enable  = Signal(event_map.size)
-        self.pending = Signal(event_map.size)
-        self.clear   = Signal(event_map.size)
 
     def elaborate(self, platform):
         m = Module()
