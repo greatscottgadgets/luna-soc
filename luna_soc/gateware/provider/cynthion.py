@@ -54,6 +54,24 @@ class LEDProvider(Component):
         return m
 
 
+class ButtonProvider(Component):
+    def __init__(self, id="button_user", index=0):
+        self.id    = id
+        self.index = index
+        super().__init__({
+            "pins": In(gpio.PinSignature()).array(1)
+        })
+
+    def elaborate(self, platform):
+        m = Module()
+        try:
+            button = platform.request(self.id, self.index)
+            m.d.comb += self.pins[0].i.eq(button.i[0])
+        except:
+            logging.warning(f"Platform does not support {self.id} {self.index}")
+        return m
+
+
 class UARTProvider(Component):
     def __init__(self, id="uart", index=0):
         self.id    = id
