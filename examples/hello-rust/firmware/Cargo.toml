@@ -17,9 +17,6 @@ default-features = false
 features = ["critical-section", "vexriscv"]
 
 [dependencies.lunasoc-hal]
-path = "../../../../cynthion.git.amaranth-5/firmware/lunasoc-hal/"
-#git = "https://github.com/antoinevg/cynthion.git"
-#branch = "antoinevg/luna-soc-0.3"
-#git = "https://github.com/greatscottgadgets/cynthion.git"
+version = "0.2"
 default-features = false
 features = ["vexriscv"]
