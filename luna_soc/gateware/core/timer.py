@@ -84,10 +84,10 @@ class Peripheral(wiring.Component):
         zero = Signal()
         with m.If(self._enable.f.enable.data):
             with m.If((self._counter.f.value.r_data == 0) & \
-                      (self._reload.f.value.data != 0) & \
-                      (self._mode.f.periodic.data == 1)):
+                      (self._reload.f.value.data != 0)):
                 m.d.comb += zero.eq(1)
-                m.d.sync += self._counter.f.value.r_data.eq(self._reload.f.value.data)
+                with m.If(self._mode.f.periodic.data == 1):
+                    m.d.sync += self._counter.f.value.r_data.eq(self._reload.f.value.data)
             with m.Elif(self._counter.f.value.r_data != 0):
                 m.d.sync += self._counter.f.value.r_data.eq(self._counter.f.value.r_data - 1)
         with m.Else():
