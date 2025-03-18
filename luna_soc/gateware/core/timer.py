@@ -82,18 +82,19 @@ class Peripheral(wiring.Component):
 
         # peripheral logic
         zero = Signal()
+        finish = Signal()
         with m.If(self._enable.f.enable.data):
-            with m.If((self._counter.f.value.r_data == 0) & \
-                      (self._reload.f.value.data != 0)):
-                m.d.comb += zero.eq(1)
-                with m.If(self._mode.f.periodic.data == 1):
+            with m.If(self._counter.f.value.r_data == 0):
+                m.d.comb += zero.eq(~finish)
+                with m.If(self._mode.f.periodic.data):
                     m.d.sync += self._counter.f.value.r_data.eq(self._reload.f.value.data)
-            with m.Elif(self._counter.f.value.r_data != 0):
+                with m.Else():
+                    m.d.sync += finish.eq(1)
+            with m.Else():
                 m.d.sync += self._counter.f.value.r_data.eq(self._counter.f.value.r_data - 1)
         with m.Else():
-            m.d.sync += [
-                self._counter.f.value.r_data.eq(self._reload.f.value.data),
-            ]
+            m.d.sync += self._counter.f.value.r_data.eq(self._reload.f.value.data)
+            m.d.sync += finish.eq(0)
 
         # connect events to irq line
         m.d.comb += [
