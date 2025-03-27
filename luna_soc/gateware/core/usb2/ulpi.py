@@ -35,7 +35,7 @@ class Signature(wiring.Signature):
 
     def __init__(self):
         super().__init__({
-            "data" : In(
+            "data" : Out(
                 wiring.Signature({
                     "i"  :  In  (unsigned(8)),
                     "o"  :  Out (unsigned(8)),
@@ -50,8 +50,8 @@ class Signature(wiring.Signature):
 
             # FIXME these are nested with i/o because luna is expecting Pins not the Signals that wiring provides
             "clk" : Out (wiring.Signature({ "o" : Out (unsigned(1)) })),
-            "nxt" : In  (wiring.Signature({ "i" : In  (unsigned(1)) })),
+            "nxt" : Out (wiring.Signature({ "i" : In  (unsigned(1)) })),
             "stp" : Out (wiring.Signature({ "o" : Out (unsigned(1)) })),
-            "dir" : In  (wiring.Signature({ "i" : In  (unsigned(1)) })),
+            "dir" : Out (wiring.Signature({ "i" : In  (unsigned(1)) })),
             "rst" : Out (wiring.Signature({ "o" : Out (unsigned(1)) })),
         })
