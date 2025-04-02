@@ -653,8 +653,8 @@ class OutFIFOInterface(Peripheral, Elaboratable):
                 m.d.usb += endpoint_primed[token.endpoint].eq(0)
 
         # Mark our FIFO as ready iff it is enabled and primed on receipt of a new token.
-        with m.If(token.new_token & self.enable.r_data & endpoint_primed[token.endpoint]):
-            m.d.usb += fifo_ready.eq(1)
+        with m.If(token.new_token):
+            m.d.usb += fifo_ready.eq(self.enable.r_data & endpoint_primed[token.endpoint])
 
         # Set the value of our endpoint `stall` based on our `stall` register...
         with m.If(self.stall.w_stb):
@@ -736,7 +736,7 @@ class OutFIFOInterface(Peripheral, Elaboratable):
 
         # Whenever we capture data, update our associated endpoint number
         # to match the endpoint on which we received the relevant data.
-        with m.If(token.new_token & token.is_out):
+        with m.If(token.new_token & token.is_out & self.enable.r_data):
             m.d.usb += self.data_ep.r_data.eq(token.endpoint)
 
         # Whenever we ACK a non-redundant receive, toggle our DATA PID.
