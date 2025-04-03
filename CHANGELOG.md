@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.3.0] - 2025-04-03
+> This is a breaking release which will require substantial changes in all useages of luna-soc cores.
+>
+> For migration information see: https://github.com/greatscottgadgets/luna-soc/pull/33
+>
+> Please refer to the [v0.2.x](https://github.com/greatscottgadgets/luna-soc/tree/v0.2.x) branch for older releases of luna-soc.
+
+### Changed
+* All gateware has been ported from Lambdasoc to Amaranth `0.5.x` and Amaranth-SoC.
+
+
 ## [0.2.4] - 2025-04-03
 ### Fixed
 * Concurrent transactions could lock `OutFIFOInterface`. (Tx @thejh!)
@@ -46,7 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.4...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.4...0.3.0
 [0.2.4]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.3...0.2.4
 [0.2.3]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.1...0.2.2
