@@ -1,16 +1,29 @@
-[package]
-name = "hello-rust"
-version = "0.1.0"
-authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
-license-file = "LICENSE.txt"
-edition = "2021"
+[workspace]
+members = [
+    "lunasoc-pac",
+    "firmware",
+]
+resolver = "2"
 
-[dependencies]
-riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
-riscv-rt = { version = "=0.11.0" }
-panic-halt = "0.2.0"
+exclude = [
+]
 
-lunasoc-pac = { git = "https://github.com/greatscottgadgets/cynthion.git", default-features = false, features = ["critical-section", "vexriscv"]}
-lunasoc-hal = { git = "https://github.com/greatscottgadgets/cynthion.git", default-features = false, features = ["vexriscv"]}
+# - profiles ------------------------------------------------------------------
 
-log = "0.4.17"
+[profile.release]
+codegen-units = 1
+debug = true
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = "s"
+overflow-checks = false
+
+[profile.dev]
+codegen-units = 1
+debug = true
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = "s"
+overflow-checks = false

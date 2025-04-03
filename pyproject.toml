@@ -29,7 +29,7 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-    "luna-usb~=0.1",
+    "luna-usb~=0.2",
 ]
 
 [project.urls]

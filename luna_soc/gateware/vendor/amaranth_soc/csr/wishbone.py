@@ -1,15 +1,17 @@
 from amaranth import *
-from amaranth.utils import log2_int
+from amaranth.lib import wiring
+from amaranth.lib.wiring import In, flipped
+from amaranth.utils import exact_log2
 
-from . import Interface as CSRInterface
-from ..wishbone import Interface as WishboneInterface
+from . import Interface
+from .. import wishbone
 from ..memory import MemoryMap
 
 
 __all__ = ["WishboneCSRBridge"]
 
 
-class WishboneCSRBridge(Elaboratable):
+class WishboneCSRBridge(wiring.Component):
     """Wishbone to CSR bridge.
 
     A bus bridge for accessing CSR registers from Wishbone. This bridge supports any Wishbone
@@ -25,9 +27,9 @@ class WishboneCSRBridge(Elaboratable):
     ----------
     csr_bus : :class:`..csr.Interface`
         CSR bus driven by the bridge.
-    data_width : int or None
-        Wishbone bus data width. If not specified, defaults to ``csr_bus.data_width``.
-    name : str
+    data_width : int
+        Wishbone bus data width. Optional. If ``None``, defaults to ``csr_bus.data_width``.
+    name : :class:`..memory.MemoryMap.Name`
         Window name. Optional.
 
     Attributes
@@ -36,28 +38,37 @@ class WishboneCSRBridge(Elaboratable):
         Wishbone bus provided by the bridge.
     """
     def __init__(self, csr_bus, *, data_width=None, name=None):
-        if not isinstance(csr_bus, CSRInterface):
-            raise ValueError("CSR bus must be an instance of CSRInterface, not {!r}"
-                             .format(csr_bus))
+        if isinstance(csr_bus, wiring.FlippedInterface):
+            csr_bus_unflipped = flipped(csr_bus)
+        else:
+            csr_bus_unflipped = csr_bus
+        if not isinstance(csr_bus_unflipped, Interface):
+            raise TypeError(f"CSR bus must be an instance of csr.Interface, not "
+                            f"{csr_bus_unflipped!r}")
         if csr_bus.data_width not in (8, 16, 32, 64):
-            raise ValueError("CSR bus data width must be one of 8, 16, 32, 64, not {!r}"
-                             .format(csr_bus.data_width))
+            raise ValueError(f"CSR bus data width must be one of 8, 16, 32, 64, not "
+                             f"{csr_bus.data_width!r}")
         if data_width is None:
             data_width = csr_bus.data_width
 
-        self.csr_bus = csr_bus
-        self.wb_bus  = WishboneInterface(
-            addr_width=max(0, csr_bus.addr_width - log2_int(data_width // csr_bus.data_width)),
-            data_width=data_width,
-            granularity=csr_bus.data_width,
-            name="wb")
+        ratio  = data_width // csr_bus.data_width
+        wb_sig = wishbone.Signature(addr_width=max(0, csr_bus.addr_width - exact_log2(ratio)),
+                                    data_width=data_width,
+                                    granularity=csr_bus.data_width)
 
-        wb_map = MemoryMap(addr_width=csr_bus.addr_width, data_width=csr_bus.data_width,
-                           name=name)
+        super().__init__({"wb_bus": In(wb_sig)})
+
+        self.wb_bus.memory_map = MemoryMap(addr_width=csr_bus.addr_width,
+                                           data_width=csr_bus.data_width)
         # Since granularity of the Wishbone interface matches the data width of the CSR bus,
         # no width conversion is performed, even if the Wishbone data width is greater.
-        wb_map.add_window(self.csr_bus.memory_map)
-        self.wb_bus.memory_map = wb_map
+        self.wb_bus.memory_map.add_window(csr_bus.memory_map, name=name)
+
+        self._csr_bus = csr_bus
+
+    @property
+    def csr_bus(self):
+        return self._csr_bus
 
     def elaborate(self, platform):
         csr_bus = self.csr_bus
@@ -66,7 +77,7 @@ class WishboneCSRBridge(Elaboratable):
         m = Module()
 
         cycle = Signal(range(len(wb_bus.sel) + 1))
-        m.d.comb += csr_bus.addr.eq(Cat(cycle[:log2_int(len(wb_bus.sel))], wb_bus.adr))
+        m.d.comb += csr_bus.addr.eq(Cat(cycle[:exact_log2(len(wb_bus.sel))], wb_bus.adr))
 
         with m.If(wb_bus.cyc & wb_bus.stb):
             with m.Switch(cycle):

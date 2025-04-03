@@ -8,6 +8,5 @@ The repositories and commit hashes for each of these are as follows:
 
 | Repository                                      | Commit                                                                        |
 | ----------------------------------------------- | ----------------------------------------------------------------------------- |
-| https://github.com/amaranth-lang/amaranth-soc   | [`d2185e3`](https://github.com/amaranth-lang/amaranth-soc/commit/d2185e3)     |
-| https://github.com/amaranth-lang/amaranth-stdio | [`4a14bb17`](https://github.com/amaranth-lang/amaranth-stdio/commit/4a14bb17) |
-| https://github.com/lambdaconcept/lambdasoc      | [`6078eb37`](https://github.com/lambdaconcept/lambdasoc/commit/6078eb37)      |
+| https://github.com/amaranth-lang/amaranth-soc   | [`5c43cf5`](https://github.com/amaranth-lang/amaranth-soc/commit/5c43cf5)     |
+| https://github.com/amaranth-lang/amaranth-stdio | [`618a13f`](https://github.com/amaranth-lang/amaranth-stdio/commit/618a13f)   |
