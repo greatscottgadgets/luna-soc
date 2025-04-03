@@ -27,10 +27,10 @@ d2:
 # Compile all register maps
 SVD = source/lunasoc.svd
 registers:
-	python bin/svd2rst.py USB0			  $(SVD) images/eptri/registers-USB0.rst
-	python bin/svd2rst.py USB0_EP_CONTROL $(SVD) images/eptri/registers-USB0_EP_CONTROL.rst
-	python bin/svd2rst.py USB0_EP_IN	  $(SVD) images/eptri/registers-USB0_EP_IN.rst
-	python bin/svd2rst.py USB0_EP_OUT	  $(SVD) images/eptri/registers-USB0_EP_OUT.rst
+	python bin/svd2rst.py usb0			  $(SVD) images/eptri/registers-USB0.rst
+	python bin/svd2rst.py usb0_ep_control $(SVD) images/eptri/registers-USB0_EP_CONTROL.rst
+	python bin/svd2rst.py usb0_ep_in	  $(SVD) images/eptri/registers-USB0_EP_IN.rst
+	python bin/svd2rst.py usb0_ep_out	  $(SVD) images/eptri/registers-USB0_EP_OUT.rst
 
 
 # Catch-all target: route all unknown targets to Sphinx using the new

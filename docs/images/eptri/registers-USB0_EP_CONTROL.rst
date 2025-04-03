@@ -1,53 +1,136 @@
-.. list-table:: USB0_EP_CONTROL Register Map
+
+**CONTROL Register**
+
+.. list-table::
+  :widths: 100 100 100 500
   :header-rows: 1
 
   * - Offset
     - Range
     - Access
-    - Name
-    - Description
+    - Field
   * - 0x0000
     - [7:0]
+    - write-only
+    - ``address``
+
+.. code-block:: markdown
+
+     Control register
+
+            address: Controls the current device's USB address. Should be written after a SET_ADDRESS
+                     request is received. Automatically resets back to zero on a USB reset.
+        
+
+
+**STATUS Register**
+
+.. list-table::
+  :widths: 100 100 100 500
+  :header-rows: 1
+
+  * - Offset
+    - Range
+    - Access
+    - Field
+  * - 0x0002
+    - [7:0]
     - read-only
-    - ``data``
-    - A FIFO that returns the bytes from the most recently captured SETUP packet.            Reading a byte from this register advances the FIFO. The first eight bytes read            from this contain the core SETUP packet.
+    - ``address``
+  * - 0x0002
+    - [11:8]
+    - read-only
+    - ``epno``
+  * - 0x0002
+    - [12:12]
+    - read-only
+    - ``have``
+
+.. code-block:: markdown
+
+     Status register
+
+            address: Holds the current device's active USB address.
+            epno:    The endpoint number associated with the most recently captured SETUP packet.
+            have:    `1` iff data is available in the FIFO.
+        
+
+
+**RESET Register**
+
+.. list-table::
+  :widths: 100 100 100 500
+  :header-rows: 1
+
+  * - Offset
+    - Range
+    - Access
+    - Field
   * - 0x0004
     - [0:0]
     - write-only
-    - ``reset``
-    - Local reset control for the SETUP handler; writing a '1' to this register clears the handler state.
-  * - 0x0008
-    - [3:0]
+    - ``fifo``
+
+.. code-block:: markdown
+
+     Reset register
+
+            fifo: Local reset control for the SETUP handler; writing a '1' to this register clears
+                  the handler state.
+        
+
+
+**DATA Register**
+
+.. list-table::
+  :widths: 100 100 100 500
+  :header-rows: 1
+
+  * - Offset
+    - Range
+    - Access
+    - Field
+  * - 0x0005
+    - [7:0]
     - read-only
-    - ``epno``
-    - The endpoint number associated with the most recently captured SETUP packet.
-  * - 0x000c
-    - [0:0]
-    - read-only
-    - ``have``
-    - `1` iff data is available in the FIFO.
+    - ``byte``
+
+.. code-block:: markdown
+
+     Data register
+
+            A FIFO that returns the bytes from the most recently captured SETUP packet.
+            Reading a byte from this register advances the FIFO. The first eight bytes read
+            from this contain the core SETUP packet.
+        
+
+
+**EV_ENABLE Register**
+
+.. list-table::
+  :widths: 100 100 100 500
+  :header-rows: 1
+
+  * - Offset
+    - Range
+    - Access
+    - Field
   * - 0x0010
     - [0:0]
-    - read-only
-    - ``pend``
-    - `1` iff an interrupt is pending
-  * - 0x0014
-    - [7:0]
     - read-write
-    - ``address``
-    - Controls the current device's USB address. Should be written after a SET_ADDRESS request is            received. Automatically resets back to zero on a USB reset.
-  * - 0x0020
-    - [0:0]
-    - read-only
-    - ``status``
-    - usb0_ep_control status register field
-  * - 0x0024
-    - [0:0]
-    - read-write
-    - ``pending``
-    - usb0_ep_control pending register field
-  * - 0x0028
+    - ``mask``
+
+**EV_PENDING Register**
+
+.. list-table::
+  :widths: 100 100 100 500
+  :header-rows: 1
+
+  * - Offset
+    - Range
+    - Access
+    - Field
+  * - 0x0011
     - [0:0]
     - read-write
-    - ``enable``
-    - usb0_ep_control enable register field
+    - ``mask``

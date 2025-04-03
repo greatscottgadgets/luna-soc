@@ -7,8 +7,8 @@ recommonmark==0.7.1
 jinja2==3.1.5
 
 # needed to build api docs
-amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio@4a14bb17
-amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc@d2185e3
+amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio
+amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc
 minerva @ git+https://github.com/minerva-cpu/minerva
 luna-usb @ git+https://github.com/greatscottgadgets/luna@main
 luna-soc @ git+https://github.com/greatscottgadgets/luna-soc@main
