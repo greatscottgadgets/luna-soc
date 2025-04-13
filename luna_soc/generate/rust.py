@@ -57,7 +57,7 @@ class LinkerScript:
         ram = "blockram" if "blockram" in regions else "scratchpad"
         if "psram_xip" in regions:
             rom = "psram_xip"
-        else if "spiflash" in regions:
+        elif "spiflash" in regions:
             rom = "spiflash"
         else:
             rom = ram
