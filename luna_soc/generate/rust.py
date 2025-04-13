@@ -25,7 +25,7 @@ class LinkerScript:
 
         # TODO this should be determined by introspection
         memories = ["ram", "rom", "blockram", "spiflash",
-                    "bootrom", "scratchpad", "mainram", "psram", "psram_xip"]
+                    "bootrom", "scratchpad", "mainram", "psram"]
 
         # warning header
         emit("/*")
@@ -56,7 +56,7 @@ class LinkerScript:
         emit("}")
         emit("")
 
-        if xip_window is not None:
+        if xip_window is not None and reset_offset > 0:
             emit(f"_stext = ORIGIN({xip_window}) + {hex(reset_offset)};")
             emit("")
 
