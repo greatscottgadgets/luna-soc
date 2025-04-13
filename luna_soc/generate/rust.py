@@ -25,7 +25,7 @@ class LinkerScript:
 
         # TODO this should be determined by introspection
         memories = ["ram", "rom", "blockram", "spiflash",
-                    "bootrom", "scratchpad", "mainram"]
+                    "bootrom", "scratchpad", "mainram", "psram", "psram_xip"]
 
         # warning header
         emit("/*")
@@ -55,7 +55,12 @@ class LinkerScript:
 
         # region aliases
         ram = "blockram" if "blockram" in regions else "scratchpad"
-        rom = "spiflash" if "spiflash" in regions else ram
+        if "psram_xip" in regions:
+            rom = "psram_xip"
+        else if "spiflash" in regions:
+            rom = "spiflash"
+        else:
+            rom = ram
         aliases = {
             "REGION_TEXT":   rom,
             "REGION_RODATA": rom,
