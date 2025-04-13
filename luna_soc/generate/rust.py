@@ -41,26 +41,28 @@ class LinkerScript:
         emit("MEMORY {")
         window: MemoryMap
         name:   MemoryMap.Name
+        xip_window = None
+        reset_offset = None
         for window, name, (start, end, ratio) in self.memory_map.windows():
             name = name[0]
             if name not in memories:
                 logging.debug("Skipping non-memory resource: {}".format(name))
                 continue
             if self.reset_addr >= start and self.reset_addr < end:
-                start = self.reset_addr
+                xip_window = name
+                reset_offset = self.reset_addr - start
             emit(f"    {name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{end-start:08x}")
             regions.add(name)
         emit("}")
         emit("")
 
+        if xip_window is not None:
+            emit(f"_stext = ORIGIN({xip_window}) + {hex(reset_offset)};")
+            emit("")
+
         # region aliases
         ram = "blockram" if "blockram" in regions else "scratchpad"
-        if "psram_xip" in regions:
-            rom = "psram_xip"
-        elif "spiflash" in regions:
-            rom = "spiflash"
-        else:
-            rom = ram
+        rom = xip_window if xip_window is not None else ram
         aliases = {
             "REGION_TEXT":   rom,
             "REGION_RODATA": rom,
