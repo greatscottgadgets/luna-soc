@@ -17,6 +17,6 @@ default-features = false
 features = ["critical-section", "vexriscv"]
 
 [dependencies.lunasoc-hal]
-version = "0.2"
+path = "/home/seb/dev/cynthion/firmware/lunasoc-hal"
 default-features = false
 features = ["vexriscv"]
