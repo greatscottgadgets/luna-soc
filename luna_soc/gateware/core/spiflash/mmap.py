@@ -17,7 +17,7 @@ from amaranth_soc.memory                import MemoryMap
 from .port                              import SPIControlPort
 from .utils                             import WaitTimer
 
-from tiliqua.sim                        import is_hw
+from ....sim                            import is_hw
 
 
 class SPIFlashMemoryMap(wiring.Component):
