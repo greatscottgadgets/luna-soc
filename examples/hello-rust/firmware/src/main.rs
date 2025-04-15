@@ -4,7 +4,7 @@
 use log::info;
 use panic_halt as _;
 use riscv_rt::entry;
-use lunasoc_hal::hal::delay::DelayUs;
+use lunasoc_hal::hal::delay::DelayNs;
 
 use firmware::{pac, hal};
 use hal::Serial0;
@@ -33,7 +33,7 @@ fn main() -> ! {
     info!("Peripherals initialized, entering main loop.");
 
     loop {
-        timer.delay_ms(100).unwrap();
+        timer.delay_ms(100);
 
         if direction {
             led_state >>= 1;
