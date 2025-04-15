@@ -120,7 +120,7 @@ class HelloSoc(wiring.Component):
         rust.PAC(svd_path).generate(pac_path=os.path.join(this_path, "lunasoc-pac"))
 
         logging.info("Building Rust firmware for SoC")
-        firmware_bin = os.path.join(this_path, build_dir, "firmware.bin")
+        firmware_bin = os.path.join(this_path, "firmware.bin")
         subprocess.check_call([
             "cargo", "build", "--release"
             ], env=os.environ, cwd=firmware_path)
