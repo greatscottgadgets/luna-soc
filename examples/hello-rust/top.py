@@ -6,6 +6,7 @@
 
 import logging
 import os
+import subprocess
 import sys
 
 from luna                            import configure_default_logging
@@ -68,15 +69,8 @@ class HelloSoc(wiring.Component):
             features={"cti", "bte", "err"}
         )
 
-        # ... read our firmware binary ...
-        filename = "build/firmware.bin"
-        firmware = get_mem_data(filename, data_width=32, endianness="little")
-        if not firmware:
-            logging.warning(f"Firmware file '{filename}' could not be located.")
-            firmware = []
-
         # blockram
-        self.blockram = blockram.Peripheral(size=blockram_size, init=firmware)
+        self.blockram = blockram.Peripheral(size=blockram_size)
         self.wb_decoder.add(self.blockram.bus, addr=blockram_base, name="blockram")
 
         # csr decoder
@@ -102,9 +96,49 @@ class HelloSoc(wiring.Component):
         self.wb_to_csr = WishboneCSRBridge(self.csr_decoder.bus, data_width=32)
         self.wb_decoder.add(self.wb_to_csr.wb_bus, addr=csr_base, sparse=False, name="wb_to_csr")
 
+    def build(self, name, build_dir):
+
+        import shutil
+        from luna_soc.generate import rust, introspect, svd
+        memory_map = introspect.memory_map(self)
+        interrupts = introspect.interrupts(self)
+        reset_addr = introspect.reset_addr(self)
+
+        this_path = os.path.dirname(os.path.realpath(__file__))
+        firmware_path = os.path.join(this_path, "firmware")
+
+        logging.info("Generating Rust linker region info script for SoC")
+        with open(os.path.join(firmware_path, "../memory.x"), "w") as f:
+            rust.LinkerScript(memory_map, reset_addr).generate(file=f)
+
+        logging.info("Generating SVD description for SoC")
+        svd_path = os.path.join(this_path, f"{name}.svd")
+        with open(svd_path, "w") as f:
+            svd.SVD(memory_map, interrupts).generate(file=f)
+
+        logging.info("Generating Rust PAC for SoC")
+        rust.PAC(svd_path).generate(pac_path=os.path.join(this_path, "lunasoc-pac"))
+
+        logging.info("Building Rust firmware for SoC")
+        firmware_bin = os.path.join(this_path, "firmware.bin")
+        subprocess.check_call([
+            "cargo", "build", "--release"
+            ], env=os.environ, cwd=firmware_path)
+        subprocess.check_call([
+            "cargo", "objcopy", "--release", "--", "-Obinary", firmware_bin
+            ], env=os.environ, cwd=firmware_path)
+
+        firmware = get_mem_data(firmware_bin, data_width=32, endianness="little")
+        if not firmware:
+            logging.error(f"Firmware file '{filename}' could not be located.")
+            exit(-1)
+        self.blockram.init = firmware
+
 
     def elaborate(self, platform):
         m = Module()
+
+        assert self.blockram.init
 
         # bus
         m.submodules += [self.wb_arbiter, self.wb_decoder]
@@ -173,7 +207,6 @@ class Top(Elaboratable):
         m.submodules += self.soc
 
         return m
-
 
 # - main ----------------------------------------------------------------------
 
