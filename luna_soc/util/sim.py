@@ -1,9 +1,11 @@
-# Copyright (c) 2024 S. Holzapfel <me@sebholzapfel.com>
 #
-# SPDX-License-Identifier: CERN-OHL-S-2.0
+# This file is part of LUNA.
 #
+# Copyright (c) 2025 S. Holzapfel <me@sebholzapfel.com>
+# Copyright (c) 2023-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
 
-"""Utilities for simulating Tiliqua designs."""
+"""Utilities for simulating luna-soc designs with Verilator."""
 
 import glob
 import os
@@ -21,7 +23,7 @@ from amaranth_soc          import gpio
 def is_hw(platform):
     # assumption: anything that inherits from Platform is a
     # real hardware platform. Anything else isn't.
-    # is there a better way of doing this?
+    # is there a more idiomatic way of doing this?
     return isinstance(platform, Platform)
 
 class VerilatorPlatform():
@@ -35,8 +37,6 @@ class VerilatorPlatform():
             m = Module()
 
             m.domains.sync   = ClockDomain()
-            m.domains.usb    = ClockDomain()
-            m.domains.fast   = ClockDomain()
 
             return m
 
@@ -99,7 +99,7 @@ class VerilatorPlatform():
         # Copy shared testbench headers somewhere Verilator's build
         # process can see them.
         os.makedirs(verilator_dst)
-        testbench_utils = glob.glob("./src/tb_cpp/*.h")
+        testbench_utils = glob.glob("./tb_cpp/*.h")
         for header in testbench_utils:
             shutil.copy(header, verilator_dst)
 
