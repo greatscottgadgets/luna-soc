@@ -1,10 +1,17 @@
 # Build outputs
 **/scala/project/target/
 **/scala/target/
+**/lunasoc-pac/src/generated/*
+**/lunasoc-pac/src/generated.rs
+**/lunasoc-pac/device.x
 memory.x
 applets/**/build/
 examples/**/build/
 *.bit
+*.svd
+*.fst
+*.fst.hier
+build/*
 
 # Compiled python files
 __pycache__/
@@ -59,3 +66,7 @@ firmware-bin
 # Never include unencrypted deploy keys.
 id_deploy
 id_deploy.pub
+
+# Artifacts dropped by `pdm install`
+.pdm-python
+pdm.lock
