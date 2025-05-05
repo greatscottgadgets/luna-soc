@@ -132,7 +132,7 @@ class Peripheral(wiring.Component):
 
         # events
         EventSource = Annotated[event.Source, "Indicates that the host has successfully transferred an ``IN`` packet, and that the FIFO is now empty."]
-        self._done = EventSource(path=("done",))
+        self._done = EventSource(trigger="rise", path=("done",))
         event_map = event.EventMap()
         event_map.add(self._done)
         self._events = csr.event.EventMonitor(event_map, data_width=8)

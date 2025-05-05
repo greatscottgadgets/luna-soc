@@ -94,7 +94,7 @@ class Peripheral(wiring.Component):
         # events
         from typing import Annotated
         EventSource = Annotated[event.Source, "Interrupt that triggers when a new SETUP packet is ready to be read."]
-        self._setup_received = EventSource(path=("setup_received",))
+        self._setup_received = EventSource(trigger="rise", path=("setup_received",))
         event_map = event.EventMap()
         event_map.add(self._setup_received)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
