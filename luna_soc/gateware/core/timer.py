@@ -56,8 +56,8 @@ class Peripheral(wiring.Component):
 
         # events
         from typing import Annotated
-        ResetSource = Annotated[event.Source, "Interrupt that occurs when the timer reaches zero."]
-        self._zero = ResetSource(path=("zero",))
+        EventSource = Annotated[event.Source, "Interrupt that occurs when the timer reaches zero."]
+        self._zero = EventSource(trigger="rise", path=("zero",))
         event_map = event.EventMap()
         event_map.add(self._zero)
         self._events = csr.event.EventMonitor(event_map, data_width=8)

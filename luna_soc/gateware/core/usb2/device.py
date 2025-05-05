@@ -75,7 +75,7 @@ class Peripheral(wiring.Component):
 
         # events
         EventSource = Annotated[event.Source, "Interrupt that occurs when a USB bus reset is received."]
-        self._reset = EventSource(path=("reset",))
+        self._reset = EventSource(trigger="rise", path=("reset",))
         event_map = event.EventMap()
         event_map.add(self._reset)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
