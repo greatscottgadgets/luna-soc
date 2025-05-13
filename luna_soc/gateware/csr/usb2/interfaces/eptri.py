@@ -297,10 +297,6 @@ class InFIFOInterface(Peripheral, Elaboratable):
         with m.Elif(decrement & ~increment):
             m.d.usb += bytes_in_fifo.eq(bytes_in_fifo - 1)
 
-        # Latch token endpoint until all data is written out from the FIFO.
-        latched_endpoint = Signal(4)
-        with m.If(token.new_token & token.is_in & (~fifo.r_rdy)):
-            m.d.usb += latched_endpoint.eq(token.endpoint)
 
         #
         # Register updates.
@@ -358,11 +354,11 @@ class InFIFOInterface(Peripheral, Elaboratable):
         # Data toggle control.
         #
 
-        endpoint_matches = (latched_endpoint == self.epno.r_data)
+        endpoint_matches = (token.endpoint == self.epno.r_data)
         packet_complete  = self.interface.handshakes_in.ack & token.is_in & endpoint_matches
 
         # Always drive the DATA pid we're transmitting with our current data pid.
-        m.d.comb += self.interface.tx_pid_toggle.eq(endpoint_data_pid[latched_endpoint])
+        m.d.comb += self.interface.tx_pid_toggle.eq(endpoint_data_pid[token.endpoint])
 
         # If our controller is overriding the data PID, accept the override.
         with m.If(self.pid.w_stb):
@@ -370,7 +366,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
 
         # Otherwise, toggle our expected DATA PID once we receive a complete packet.
         with m.Elif(packet_complete):
-            m.d.usb += endpoint_data_pid[latched_endpoint].eq(~endpoint_data_pid[latched_endpoint])
+            m.d.usb += endpoint_data_pid[token.endpoint].eq(~endpoint_data_pid[token.endpoint])
 
 
         #
@@ -379,7 +375,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
 
         # Logic shorthand.
         new_in_token     = (token.is_in & token.ready_for_response)
-        stalled          = endpoint_stalled[latched_endpoint]
+        stalled          = endpoint_stalled[token.endpoint]
 
         with m.FSM(domain='usb') as f:
 
@@ -406,7 +402,7 @@ class InFIFOInterface(Peripheral, Elaboratable):
                 # This means we have data to send, but are just waiting for an IN token.
                 with m.If(self.epno.w_stb & ~stalled):
                     # we can also clear our NAK status now
-                    m.d.usb += endpoint_nakked[latched_endpoint].eq(0)
+                    m.d.usb += endpoint_nakked[token.endpoint].eq(0)
                     m.next = "PRIMED"
 
                 # Always return to IDLE on reset.
@@ -656,8 +652,7 @@ class OutFIFOInterface(Peripheral, Elaboratable):
             with m.If(token.endpoint == 0):
                 m.d.usb += endpoint_primed[token.endpoint].eq(0)
 
-        # On receipt of a new token, mark our FIFO as ready iff the peripheral is enabled
-        # and the destination endpoint for the token is primed.
+        # Mark our FIFO as ready iff it is enabled and primed on receipt of a new token.
         with m.If(token.new_token):
             m.d.usb += fifo_ready.eq(self.enable.r_data & endpoint_primed[token.endpoint])
 
