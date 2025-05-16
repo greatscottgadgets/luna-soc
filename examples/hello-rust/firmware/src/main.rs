@@ -2,9 +2,10 @@
 #![no_main]
 
 use log::info;
-use panic_halt as _;
+use log::error;
+use core::panic::PanicInfo;
 use riscv_rt::entry;
-use lunasoc_hal::hal::delay::DelayUs;
+use lunasoc_hal::hal::delay::DelayNs;
 
 use firmware::{pac, hal};
 use hal::Serial0;
@@ -14,6 +15,26 @@ use hal::Timer0;
 unsafe fn pre_main() {
     pac::cpu::vexriscv::flush_icache();
     pac::cpu::vexriscv::flush_dcache();
+}
+
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(panic_info: &PanicInfo) -> ! {
+    if let Some(location) = panic_info.location() {
+        error!("panic(): file '{}' at line {}",
+            location.file(),
+            location.line(),
+        );
+    } else {
+        error!("panic(): no location information");
+    }
+    loop {}
+}
+
+#[export_name = "ExceptionHandler"]
+fn exception_handler(trap_frame: &riscv_rt::TrapFrame) -> ! {
+    error!("exception_handler(): TrapFrame.ra={:x}", trap_frame.ra);
+    loop {}
 }
 
 #[entry]
@@ -33,7 +54,7 @@ fn main() -> ! {
     info!("Peripherals initialized, entering main loop.");
 
     loop {
-        timer.delay_ms(100).unwrap();
+        timer.delay_ms(100);
 
         if direction {
             led_state >>= 1;

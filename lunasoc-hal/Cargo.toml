@@ -1,0 +1,31 @@
+[package]
+name = "lunasoc-hal"
+version = "0.0.0"
+categories = ["embedded", "hardware-support", "no-std"]
+edition = "2021"
+rust-version = "1.68"
+
+[package.metadata.docs.rs]
+default-target = "riscv32imac-unknown-none-elf"
+targets = [
+    "riscv32i-unknown-none-elf",
+    "riscv32imac-unknown-none-elf",
+]
+
+[lib]
+test = true
+bench = false
+
+[dependencies]
+embedded-hal = "=1.0.0"
+embedded-hal-nb = "=1.0.0"
+log = { version = "0.4.*", optional = true }
+nb = "=1.1.0"
+riscv = { version = "=0.11.1", features = ["critical-section-single-hart"] }
+embedded-graphics = "0.8.1"
+bitflags = "2.6.0"
+micromath = "2.1.0"
+
+[dev-dependencies]
+critical-section = { version = "1.1.2", features = ["std"] }
+env_logger = "0.11.6"

@@ -6,6 +6,9 @@
 
 """Generate Rust support files for SoC designs."""
 
+import os
+import shutil
+import subprocess
 import datetime
 import logging
 
@@ -25,7 +28,7 @@ class LinkerScript:
 
         # TODO this should be determined by introspection
         memories = ["ram", "rom", "blockram", "spiflash",
-                    "bootrom", "scratchpad", "mainram"]
+                    "bootrom", "scratchpad", "mainram", "psram"]
 
         # warning header
         emit("/*")
@@ -41,21 +44,28 @@ class LinkerScript:
         emit("MEMORY {")
         window: MemoryMap
         name:   MemoryMap.Name
+        xip_window = None
+        reset_offset = None
         for window, name, (start, end, ratio) in self.memory_map.windows():
             name = name[0]
             if name not in memories:
                 logging.debug("Skipping non-memory resource: {}".format(name))
                 continue
             if self.reset_addr >= start and self.reset_addr < end:
-                start = self.reset_addr
+                xip_window = name
+                reset_offset = self.reset_addr - start
             emit(f"    {name} : ORIGIN = 0x{start:08x}, LENGTH = 0x{end-start:08x}")
             regions.add(name)
         emit("}")
         emit("")
 
+        if xip_window is not None and reset_offset > 0:
+            emit(f"_stext = ORIGIN({xip_window}) + {hex(reset_offset)};")
+            emit("")
+
         # region aliases
         ram = "blockram" if "blockram" in regions else "scratchpad"
-        rom = "spiflash" if "spiflash" in regions else ram
+        rom = xip_window if xip_window is not None else ram
         aliases = {
             "REGION_TEXT":   rom,
             "REGION_RODATA": rom,
@@ -66,3 +76,43 @@ class LinkerScript:
         }
         for alias, region in aliases.items():
             emit(f"REGION_ALIAS(\"{alias}\", {region});")
+
+
+class PAC:
+    def __init__(self, svd_path):
+        self.svd_path = svd_path
+
+    def generate(self, pac_path):
+        pac_build_dir = os.path.join(pac_path, "build")
+        pac_gen_dir   = os.path.join(pac_path, "src/generated")
+        src_genrs     = os.path.join(pac_path, "src/generated.rs")
+        shutil.rmtree(pac_build_dir, ignore_errors=True)
+        shutil.rmtree(pac_gen_dir, ignore_errors=True)
+        os.makedirs(pac_build_dir)
+        if os.path.isfile(src_genrs):
+            os.remove(src_genrs)
+
+        subprocess.check_call([
+            "svd2rust",
+            "-i", self.svd_path,
+            "-o", pac_build_dir,
+            "--target", "riscv",
+            "--make_mod",
+            "--ident-formats-theme", "legacy"
+            ], env=os.environ)
+
+        shutil.move(os.path.join(pac_build_dir, "mod.rs"), src_genrs)
+        shutil.move(os.path.join(pac_build_dir, "device.x"),
+                    os.path.join(pac_path,      "device.x"))
+
+        subprocess.check_call([
+            "form",
+            "-i", src_genrs,
+            "-o", pac_gen_dir,
+            ], env=os.environ)
+
+        shutil.move(os.path.join(pac_gen_dir, "lib.rs"), src_genrs)
+
+        subprocess.check_call([
+            "cargo", "fmt", "--", "--emit", "files"
+            ], env=os.environ, cwd=pac_path)
