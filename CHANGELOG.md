@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.3.1] - 2025-05-16
+### Fixed
+* EPTRI device would emit continual bus reset interrupts when unplugged.
+* Regression in 0.2.4 that prevented Facedancer ftdi-echo example from working.
+
+
 ## [0.3.0] - 2025-04-03
 > This is a breaking release which will require substantial changes in all useages of luna-soc cores.
 >
@@ -18,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 * All gateware has been ported from Lambdasoc to Amaranth `0.5.x` and Amaranth-SoC.
+
+---
+
+## [0.2.5] - 2025-05-16
+### Fixed
+* Facedancer ftdi-echo example stopped working in the 0.2.4 release.
 
 
 ## [0.2.4] - 2025-04-03
@@ -57,8 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.3.0...HEAD
-[0.3.0]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.4...0.3.0
+[Unreleased]: https://github.com/greatscottgadgets/luna-soc/compare/0.3.1...HEAD
+[0.3.1]: https://github.com/greatscottgadgets/luna-soc/compare/0.3.0...0.3.1
+[0.3.0]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.5...0.3.0
+[0.2.5]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.4...0.2.5
 [0.2.4]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.3...0.2.4
 [0.2.3]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/greatscottgadgets/luna-soc/compare/0.2.1...0.2.2
