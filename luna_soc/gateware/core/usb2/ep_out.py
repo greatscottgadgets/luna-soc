@@ -169,7 +169,7 @@ class Peripheral(wiring.Component):
 
         # events
         EventSource = Annotated[event.Source, "Indicates that an ``OUT`` packet has successfully been transferred from the host. This bit must be cleared in order to receive additional packets."]
-        self._done = EventSource(path=("done",))
+        self._done = EventSource(trigger="rise", path=("done",))
         event_map = event.EventMap()
         event_map.add(self._done)
         self._events = csr.event.EventMonitor(event_map, data_width=8)
