@@ -5,5 +5,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from .ic       import *
-from .minerva  import *
+try:
+    from .minerva  import *
+except Exception as e:
+    import logging
+    logging.warning(e)
 from .vexriscv import *

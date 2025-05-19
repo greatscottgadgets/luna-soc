@@ -26,7 +26,11 @@ class GPIOProvider(Component):
 
     def elaborate(self, platform):
         m = Module()
-        pins = platform.request(self.id, self.index)
+        try:
+            pins = platform.request(self.id, self.index)
+        except:
+            logging.warning(f"Platform does not support {self.id} {self.index}")
+            return m
         m.d.comb += pins.oe.eq(1)
         for n in range(8):
             m.d.comb += pins.o[n] .eq(self.pins[n].o)
@@ -82,7 +86,11 @@ class UARTProvider(Component):
 
     def elaborate(self, platform):
         m = Module()
-        uart = platform.request(self.id, self.index)
+        try:
+            uart = platform.request(self.id, self.index)
+        except:
+            logging.warning(f"Platform does not support {self.id} {self.index}")
+            return m
         m.d.comb += [
             self.pins.rx .eq(uart.rx.i),
             uart.tx.o    .eq(self.pins.tx.o),
@@ -154,7 +162,11 @@ class QSPIFlashProvider(Component):
 
     def elaborate(self, platform):
         m = Module()
-        qspi = platform.request(self.id, self.index)
+        try:
+            qspi = platform.request(self.id, self.index)
+        except:
+            logging.warning(f"Platform does not support {self.id} {self.index}")
+            return m
         m.d.comb += [
             self.pins.dq.i.eq(qspi.dq.i),
             qspi.dq.oe.eq(self.pins.dq.oe),
