@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.3.2] - 2025-05-19
+### Fixed
+* Build errors on older cynthion revisions.
+
 ## [0.3.1] - 2025-05-16
 ### Fixed
 * EPTRI device would emit continual bus reset interrupts when unplugged.
